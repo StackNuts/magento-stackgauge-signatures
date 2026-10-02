@@ -1,0 +1,113 @@
+{
+    "version": "2026.10.0",
+    "signatures": [
+        {
+            "id": "webshell-eval-base64",
+            "name": "eval() of base64-decoded PHP",
+            "severity": "critical",
+            "target": ["pub_php"],
+            "pattern_type": "literal",
+            "pattern": "eval(base64_decode(",
+            "description": "Classic webshell obfuscation: decode a base64 payload and eval() it directly. Legitimate code essentially never does this.",
+            "test_should_match": [
+                "<?php eval(base64_decode($_POST['x'])); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php $decoded = base64_decode($value); echo htmlspecialchars($decoded); ?>"
+            ]
+        },
+        {
+            "id": "webshell-eval-gzinflate",
+            "name": "eval() of gzinflate-decompressed PHP",
+            "severity": "critical",
+            "target": ["pub_php"],
+            "pattern_type": "literal",
+            "pattern": "eval(gzinflate(",
+            "description": "Same obfuscation pattern as webshell-eval-base64 using gzinflate instead of/alongside base64 to compress the payload.",
+            "test_should_match": [
+                "<?php eval(gzinflate(base64_decode('Hc...'))); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php $data = gzinflate($compressed); file_put_contents($log, $data); ?>"
+            ]
+        },
+        {
+            "id": "webshell-assert-request",
+            "name": "assert() of raw request input",
+            "severity": "critical",
+            "target": ["pub_php"],
+            "pattern_type": "regex",
+            "pattern": "/assert\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
+            "description": "assert() historically evaluated its string argument as PHP code - passing request input directly to it is a remote-code-execution webshell pattern, not something legitimate code does.",
+            "test_should_match": [
+                "<?php assert($_POST['cmd']); ?>",
+                "<?php assert( $_REQUEST[1] ); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php assert($user->isValid()); ?>"
+            ]
+        },
+        {
+            "id": "webshell-exec-request",
+            "name": "Shell execution of raw request input",
+            "severity": "critical",
+            "target": ["pub_php"],
+            "pattern_type": "regex",
+            "pattern": "/(system|passthru|shell_exec|proc_open|popen)\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
+            "description": "Passes request input directly to a shell-execution function - the defining trait of a command-execution webshell.",
+            "test_should_match": [
+                "<?php system($_GET['c']); ?>",
+                "<?php shell_exec($_REQUEST['cmd']); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php system('php-fpm-reload'); ?>"
+            ]
+        },
+        {
+            "id": "webshell-known-names",
+            "name": "Known public webshell family marker",
+            "severity": "critical",
+            "target": ["pub_php"],
+            "pattern_type": "regex",
+            "pattern": "/(c99shell|r57shell|FilesMan|WSO\\s?[Ss]hell)/",
+            "description": "Literal name/marker strings used by long-documented, widely-reused public webshell families. Presence alone is a strong signal regardless of the surrounding code.",
+            "test_should_match": [
+                "<?php // FilesMan webshell v3.2 ?>",
+                "<title>WSO Shell 2.5</title>"
+            ],
+            "test_should_not_match": [
+                "<?php // regular file manager, nothing shell-related ?>"
+            ]
+        },
+        {
+            "id": "magecart-atob-eval",
+            "name": "eval() of base64-decoded script content",
+            "severity": "critical",
+            "target": ["cms_content", "design_config"],
+            "pattern_type": "literal",
+            "pattern": "eval(atob(",
+            "description": "Decodes a base64 string and eval()s it inline - the same obfuscation technique as webshell-eval-base64, applied to injected storefront JavaScript (a common Magecart/skimmer loader pattern) rather than PHP.",
+            "test_should_match": [
+                "<script>eval(atob('ZG9jdW1lbnQ='))</script>"
+            ],
+            "test_should_not_match": [
+                "<script>var decoded = atob(encodedValue); console.log(decoded);</script>"
+            ]
+        },
+        {
+            "id": "magecart-charcode-script-build",
+            "name": "Script tag assembled via String.fromCharCode",
+            "severity": "warning",
+            "target": ["cms_content", "design_config"],
+            "pattern_type": "literal",
+            "pattern": "String.fromCharCode",
+            "description": "A common way to build a <script> tag or URL character-by-character to dodge simple string-matching defenses. Flagged as a warning, not critical, on its own - legitimate code can use String.fromCharCode for unrelated reasons, so this is a signal worth a human look rather than proof by itself.",
+            "test_should_match": [
+                "<script>var s=String.fromCharCode(60,115,99,114,105,112,116);</script>"
+            ],
+            "test_should_not_match": [
+                "<p>Copyright &copy; 2026 Example Store</p>"
+            ]
+        }
+    ]
+}

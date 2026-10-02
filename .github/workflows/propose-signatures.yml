@@ -1,0 +1,66 @@
+name: Propose new signatures
+
+# Asks Gemini (free-tier API, Google Search grounding) to research current Magento/Adobe
+# Commerce webshell and Magecart indicators of compromise, auto-validates every candidate
+# locally, and opens a PULL REQUEST for human review. AI-written detection is never merged
+# automatically - the validate.yml gate runs again on the PR itself regardless.
+#
+# Setup (once):
+#   gh secret set GEMINI_API_KEY --repo StackNuts/magento-stackgauge-signatures
+#   # optional model override (default gemini-2.5-flash):
+#   gh variable set GEMINI_MODEL --repo StackNuts/magento-stackgauge-signatures --body gemini-2.5-flash
+#   # allow Actions to open PRs:
+#   gh api -X PUT repos/StackNuts/magento-stackgauge-signatures/actions/permissions/workflow \
+#     -F default_workflow_permissions=write -F can_approve_pull_request_reviews=true
+
+on:
+  schedule:
+    - cron: '0 9 * * *'    # daily 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: propose-signatures
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Generate candidate signatures
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: php scripts/propose_signatures.php
+
+      - name: Open / update pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- signatures.json; then
+            echo "No vetted signatures to propose."
+            exit 0
+          fi
+          BRANCH=auto/new-signatures
+          git config user.name "stacknuts-bot"
+          git config user.email "stack.nuts@outlook.com"
+          git checkout -b "$BRANCH"
+          git add signatures.json
+          git commit -m "Propose new detection signatures"
+          git push -f origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "Proposed detection signatures (auto-validated - review before merge)" \
+              --body-file pr_body.md
+          else
+            echo "PR already open for $BRANCH; branch updated with the latest proposal."
+          fi
