@@ -21,3 +21,4 @@ jobs:
           php-version: '8.3'
 
       - run: php scripts/validate_signatures.php
+      - run: php scripts/test_propose_signatures.php

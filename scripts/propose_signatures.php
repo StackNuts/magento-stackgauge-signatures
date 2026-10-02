@@ -15,7 +15,10 @@
  * accepted candidates to a branch and opens a pull request for human review, same as any other
  * contribution to this repo.
  *
- * Pure PHP + curl, no Composer dependencies.
+ * Pure PHP + curl, no Composer dependencies. The network call and the vetting/file-writing
+ * logic are split into separate functions (callGemini() vs. applyCandidates()) specifically so
+ * test_propose_signatures.php can exercise the latter with a canned response and no network
+ * access or API key at all.
  */
 
 declare(strict_types=1);
@@ -24,35 +27,178 @@ require __DIR__ . '/lib/matching.php';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-$model = getenv('GEMINI_MODEL') ?: 'gemini-2.5-flash';
-$signaturesPath = getenv('SIG_PATH') ?: __DIR__ . '/../signatures.json';
-$cleanCorpusDir = getenv('CLEAN_CORPUS_DIR') ?: __DIR__ . '/../corpus/clean';
-$maxNew = (int)(getenv('MAX_NEW') ?: 5);
-$prBodyPath = getenv('PR_BODY_PATH') ?: __DIR__ . '/../pr_body.md';
+/**
+ * Calls Gemini's generateContent endpoint with Google Search grounding enabled.
+ *
+ * @return array{ok: bool, fatal: bool, text: string, error: string}
+ */
+function callGemini(string $apiKey, string $model, string $systemPrompt, string $userPrompt): array
+{
+    $payload = [
+        'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+        'contents' => [['role' => 'user', 'parts' => [['text' => $userPrompt]]]],
+        'tools' => [['google_search' => (object)[]]],
+        'generationConfig' => ['temperature' => 0, 'maxOutputTokens' => 8192],
+    ];
 
-$apiKey = getenv('GEMINI_API_KEY');
-if ($apiKey === false || $apiKey === '') {
-    fwrite(STDERR, "GEMINI_API_KEY is not set.\n");
-    exit(1);
+    $url = GEMINI_API_BASE . "/{$model}:generateContent?key={$apiKey}";
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 180,
+    ]);
+    $body = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($body === false) {
+        // Network-level failure (DNS, timeout, connection refused) - transient, not fatal.
+        return ['ok' => false, 'fatal' => false, 'text' => '', 'error' => "Request failed: {$curlError}"];
+    }
+
+    if ($httpCode >= 400) {
+        // Auth/quota/config problems are not transient - the caller should fail loudly.
+        $fatal = in_array($httpCode, [400, 401, 403, 404, 429], true);
+        return [
+            'ok' => false,
+            'fatal' => $fatal,
+            'text' => '',
+            'error' => "Gemini HTTP {$httpCode}: " . substr($body, 0, 600),
+        ];
+    }
+
+    $response = json_decode($body, true);
+    $text = '';
+    foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
+        $text .= $part['text'] ?? '';
+    }
+
+    return ['ok' => true, 'fatal' => false, 'text' => $text, 'error' => ''];
 }
 
-$existingRaw = @file_get_contents($signaturesPath);
-$existing = $existingRaw !== false ? json_decode($existingRaw, true) : null;
-if (!is_array($existing) || !isset($existing['signatures']) || !is_array($existing['signatures'])) {
-    fwrite(STDERR, "{$signaturesPath} is not valid JSON with a top-level \"signatures\" array\n");
-    exit(1);
+/**
+ * Extracts the first {...} JSON object from $text, tolerating surrounding prose or code fences.
+ *
+ * @return list<array<string, mixed>> The "signatures" array within it, or [] if none found.
+ */
+function extractCandidates(string $text): array
+{
+    if (!preg_match('/\{.*\}/s', $text, $jsonMatch)) {
+        return [];
+    }
+
+    $parsed = json_decode($jsonMatch[0], true);
+
+    return is_array($parsed['signatures'] ?? null) ? $parsed['signatures'] : [];
 }
 
-$existingIds = array_column($existing['signatures'], 'id');
-$coveredSummary = implode(
-    "\n",
-    array_map(
-        static fn (array $sig): string => "- {$sig['id']}: {$sig['name']}",
-        $existing['signatures']
-    )
-);
+/**
+ * Vets each candidate (in order, up to $maxNew) against duplicate ids and
+ * validateSignatureSet() - the same gate the CI validator applies to the whole file. Pure: no
+ * I/O, so this is the part test_propose_signatures.php exercises directly.
+ *
+ * @param list<array<string, mixed>> $candidates
+ * @param array<string, mixed> $existing Decoded signatures.json.
+ * @param list<string> $cleanFiles Absolute paths, pre-loaded via listFilesRecursively().
+ * @return array{accepted: list<array<string, mixed>>, rejected: array<string, list<string>>, existing: array<string, mixed>}
+ */
+function applyCandidates(array $candidates, array $existing, array $cleanFiles, int $maxNew): array
+{
+    $existingIds = array_column($existing['signatures'], 'id');
+    $accepted = [];
+    $rejected = [];
 
-$systemPrompt = <<<PROMPT
+    foreach (array_slice($candidates, 0, $maxNew) as $candidate) {
+        $id = $candidate['id'] ?? '(no id)';
+
+        if (in_array($id, $existingIds, true)) {
+            $rejected[$id] = ['duplicate of an existing signature id'];
+            continue;
+        }
+
+        $errors = validateSignatureSet([$candidate], $cleanFiles);
+        if ($errors !== []) {
+            $rejected[$id] = $errors;
+            continue;
+        }
+
+        $accepted[] = $candidate;
+        $existingIds[] = $id;
+    }
+
+    if ($accepted !== []) {
+        $existing['signatures'] = [...$existing['signatures'], ...$accepted];
+        $existing['version'] = date('Y-m-d');
+    }
+
+    return ['accepted' => $accepted, 'rejected' => $rejected, 'existing' => $existing];
+}
+
+/**
+ * @param list<array<string, mixed>> $accepted
+ * @param array<string, list<string>> $rejected
+ */
+function buildPrBody(array $accepted, array $rejected, string $model): string
+{
+    $prBody = "## Proposed detection signatures\n\n"
+        . "Generated by `propose_signatures.php` (model: `{$model}`), auto-validated against "
+        . "corpus/clean/ before being written here. **Review before merging.**\n\n";
+
+    if ($accepted !== []) {
+        $prBody .= "### Accepted (" . count($accepted) . ")\n\n";
+        foreach ($accepted as $signature) {
+            $prBody .= "- **{$signature['id']}** ({$signature['severity']}): {$signature['description']}\n";
+        }
+    }
+
+    if ($rejected !== []) {
+        $prBody .= "\n### Rejected (" . count($rejected) . ")\n\n";
+        foreach ($rejected as $id => $errors) {
+            $prBody .= "- **{$id}**: " . implode('; ', $errors) . "\n";
+        }
+    }
+
+    return $prBody;
+}
+
+/**
+ * @return int Process exit code.
+ */
+function main(): int
+{
+    $model = getenv('GEMINI_MODEL') ?: 'gemini-2.5-flash';
+    $signaturesPath = getenv('SIG_PATH') ?: __DIR__ . '/../signatures.json';
+    $cleanCorpusDir = getenv('CLEAN_CORPUS_DIR') ?: __DIR__ . '/../corpus/clean';
+    $maxNew = (int)(getenv('MAX_NEW') ?: 5);
+    $prBodyPath = getenv('PR_BODY_PATH') ?: __DIR__ . '/../pr_body.md';
+
+    $apiKey = getenv('GEMINI_API_KEY');
+    if ($apiKey === false || $apiKey === '') {
+        fwrite(STDERR, "GEMINI_API_KEY is not set.\n");
+        return 1;
+    }
+
+    $existingRaw = @file_get_contents($signaturesPath);
+    $existing = $existingRaw !== false ? json_decode($existingRaw, true) : null;
+    if (!is_array($existing) || !isset($existing['signatures']) || !is_array($existing['signatures'])) {
+        fwrite(STDERR, "{$signaturesPath} is not valid JSON with a top-level \"signatures\" array\n");
+        return 1;
+    }
+
+    $coveredSummary = implode(
+        "\n",
+        array_map(
+            static fn (array $sig): string => "- {$sig['id']}: {$sig['name']}",
+            $existing['signatures']
+        )
+    );
+
+    $systemPrompt = <<<PROMPT
 You are a defensive security engineer writing detection signatures for a Magento store scanner
 that checks CMS block/page content, admin-editable HTML/JS config values, and PHP files under
 pub/ for INDICATORS OF COMPROMISE. You are not assessing whether a Magento version is
@@ -85,111 +231,42 @@ Reply with ONLY a compact JSON object, no prose, no markdown fences:
 "test_should_match":["..."],"test_should_not_match":["..."]}]}
 PROMPT;
 
-$userPrompt = "Propose up to {$maxNew} new, high-confidence detection signatures for current "
-    . "Magento/Adobe Commerce webshell and Magecart-skimmer indicators of compromise.";
+    $userPrompt = "Propose up to {$maxNew} new, high-confidence detection signatures for current "
+        . "Magento/Adobe Commerce webshell and Magecart-skimmer indicators of compromise.";
 
-$payload = [
-    'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-    'contents' => [['role' => 'user', 'parts' => [['text' => $userPrompt]]]],
-    'tools' => [['google_search' => (object)[]]],
-    'generationConfig' => ['temperature' => 0, 'maxOutputTokens' => 8192],
-];
-
-$url = GEMINI_API_BASE . "/{$model}:generateContent?key={$apiKey}";
-$ch = curl_init($url);
-curl_setopt_array($ch, [
-    CURLOPT_POST => true,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-    CURLOPT_POSTFIELDS => json_encode($payload),
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT => 180,
-]);
-$body = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
-curl_close($ch);
-
-if ($body === false) {
-    // Network-level failure (DNS, timeout, connection refused) - transient, leave files
-    // untouched rather than failing the workflow outright.
-    fwrite(STDERR, "Request failed: {$curlError}\n");
-    exit(0);
-}
-
-if ($httpCode >= 400) {
-    // Auth/quota/config problems are not transient - fail loudly so they get noticed and fixed.
-    fwrite(STDERR, "Gemini HTTP {$httpCode}: " . substr($body, 0, 600) . "\n");
-    exit(in_array($httpCode, [400, 401, 403, 404, 429], true) ? 1 : 0);
-}
-
-$response = json_decode($body, true);
-$text = '';
-foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
-    $text .= $part['text'] ?? '';
-}
-
-if (!preg_match('/\{.*\}/s', $text, $jsonMatch)) {
-    fwrite(STDERR, "Could not locate a JSON object in the model's response.\n");
-    exit(0);
-}
-
-$parsed = json_decode($jsonMatch[0], true);
-$candidates = is_array($parsed['signatures'] ?? null) ? $parsed['signatures'] : [];
-
-$cleanFiles = listFilesRecursively($cleanCorpusDir);
-$accepted = [];
-$rejected = [];
-
-foreach (array_slice($candidates, 0, $maxNew) as $candidate) {
-    $id = $candidate['id'] ?? '(no id)';
-
-    if (in_array($id, $existingIds, true)) {
-        $rejected[$id] = ['duplicate of an existing signature id'];
-        continue;
+    $result = callGemini($apiKey, $model, $systemPrompt, $userPrompt);
+    if (!$result['ok']) {
+        fwrite(STDERR, $result['error'] . "\n");
+        return $result['fatal'] ? 1 : 0;
     }
 
-    $errors = validateSignatureSet([$candidate], $cleanFiles);
-    if ($errors !== []) {
-        $rejected[$id] = $errors;
-        continue;
+    $candidates = extractCandidates($result['text']);
+    if ($candidates === []) {
+        echo "No candidates found in the model's response.\n";
+        return 0;
     }
 
-    $accepted[] = $candidate;
-    $existingIds[] = $id;
-}
+    $cleanFiles = listFilesRecursively($cleanCorpusDir);
+    $applied = applyCandidates($candidates, $existing, $cleanFiles, $maxNew);
 
-$prBody = "## Proposed detection signatures\n\n"
-    . "Generated by `propose_signatures.php` (model: `{$model}`), auto-validated against "
-    . "corpus/clean/ before being written here. **Review before merging.**\n\n";
+    file_put_contents($prBodyPath, buildPrBody($applied['accepted'], $applied['rejected'], $model));
 
-if ($accepted !== []) {
-    $prBody .= "### Accepted (" . count($accepted) . ")\n\n";
-    foreach ($accepted as $signature) {
-        $prBody .= "- **{$signature['id']}** ({$signature['severity']}): {$signature['description']}\n";
+    if ($applied['accepted'] === []) {
+        echo "No vetted signatures to propose.\n";
+        return 0;
     }
+
+    file_put_contents(
+        $signaturesPath,
+        json_encode($applied['existing'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
+    );
+
+    echo 'Added ' . count($applied['accepted']) . ' vetted signature(s); rejected '
+        . count($applied['rejected']) . ".\n";
+
+    return 0;
 }
 
-if ($rejected !== []) {
-    $prBody .= "\n### Rejected (" . count($rejected) . ")\n\n";
-    foreach ($rejected as $id => $errors) {
-        $prBody .= "- **{$id}**: " . implode('; ', $errors) . "\n";
-    }
+if (!defined('PROPOSE_SIGNATURES_TESTING')) {
+    exit(main());
 }
-
-file_put_contents($prBodyPath, $prBody);
-
-if ($accepted === []) {
-    echo "No vetted signatures to propose.\n";
-    exit(0);
-}
-
-$existing['signatures'] = [...$existing['signatures'], ...$accepted];
-$existing['version'] = date('Y-m-d');
-
-file_put_contents(
-    $signaturesPath,
-    json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
-);
-
-echo 'Added ' . count($accepted) . " vetted signature(s); rejected " . count($rejected) . ".\n";
