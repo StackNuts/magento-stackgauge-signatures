@@ -36,12 +36,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Processed-source state lives on the "state" branch so it persists between runs. The first
+      # run has no state branch yet; the save step creates it.
+      - name: Check out state branch
+        uses: actions/checkout@v4
+        with:
+          ref: state
+          path: state
+          fetch-depth: 1
+        continue-on-error: true
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
 
       - name: Generate candidate signatures
         env:
+          STATE_PATH: ${{ github.workspace }}/state/processed_sources.json
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
@@ -79,3 +90,31 @@ jobs:
           name: propose-signatures-debug
           path: propose_debug.log
           if-no-files-found: ignore
+
+      - name: Save processed-source state
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if [ ! -d state/.git ]; then
+            mkdir -p state
+            git -C state init -q
+            git -C state checkout -q -b state
+            git -C state remote add origin "https://github.com/${{ github.repository }}.git"
+            git -C state config http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          fi
+          cd state
+          if [ ! -f processed_sources.json ]; then
+            echo "No state written this run."
+            exit 0
+          fi
+          git config user.name "stacknuts-bot"
+          git config user.email "stack.nuts@outlook.com"
+          git add processed_sources.json
+          if git diff --cached --quiet; then
+            echo "State unchanged."
+            exit 0
+          fi
+          git commit -q -m "Update processed-source state"
+          git push origin HEAD:state

@@ -72,6 +72,10 @@ const PAGE_CHARS = 6000;
 const CONTEXT_CHARS = 40000;
 const FETCH_SUCCESSES = 5;
 const FETCH_ATTEMPTS = 10;
+const TRIAGE_MODEL = '@cf/google/gemma-4-26b-a4b-it';
+const TRIAGE_SNIPPET_CHARS = 200;
+const TRIAGE_MAX_PICKS = 5;
+const TRIAGE_MAX_TOKENS = 6000;
 
 /**
  * Runs one Tavily search.
@@ -269,6 +273,73 @@ function selectSourcesForPrompt(array $sources): array
 }
 
 /**
+ * Asks a small, cheap model which sources are worth reading in full. Returns the picked URLs
+ * (empty on any failure, which leaves the original order in place) and the neurons it used.
+ *
+ * @param array<string, array{url: string, title: string, content: string}> $sources Keyed by URL.
+ * @return array{urls: list<string>, neurons: float, error: string, raw: string}
+ */
+function triageSources(array $sources, string $apiToken, string $accountId): array
+{
+    $lines = [];
+    foreach (array_values($sources) as $i => $hit) {
+        $snippet = mb_substr(str_replace("\n", ' ', $hit['content']), 0, TRIAGE_SNIPPET_CHARS);
+        $lines[] = ($i + 1) . ". {$hit['url']} - {$hit['title']}: {$snippet}";
+    }
+
+    $system = 'You triage search results for a researcher writing Magento malware detection signatures. '
+        . 'Pick up to ' . TRIAGE_MAX_PICKS . ' URLs whose snippet describes concrete indicators (code, domains, '
+        . 'file paths, IP addresses, payload strings) worth reading in full. Ignore stock news, job adverts, '
+        . 'product marketing and general advice. Reply with ONLY JSON: {"read": ["url", ...]}';
+    $user = "Results:\n" . implode("\n", $lines);
+
+    $result = callWorkersAI($apiToken, $accountId, TRIAGE_MODEL, $system, $user, TRIAGE_MAX_TOKENS);
+    $neurons = (float)($result['neurons'] ?? 0);
+    if (!$result['ok']) {
+        return ['urls' => [], 'neurons' => $neurons, 'error' => $result['error'], 'raw' => ''];
+    }
+
+    $picked = [];
+    if (preg_match('/\{.*\}/s', $result['text'], $jsonMatch)) {
+        $parsed = json_decode($jsonMatch[0], true);
+        foreach ($parsed['read'] ?? [] as $url) {
+            if (is_string($url) && isset($sources[$url]) && !in_array($url, $picked, true)) {
+                $picked[] = $url;
+            }
+        }
+    }
+
+    return [
+        'urls' => array_slice($picked, 0, TRIAGE_MAX_PICKS),
+        'neurons' => $neurons,
+        'error' => $picked === [] ? 'no usable URLs in the reply (finish: ' . ($result['finish'] ?? '?') . ')' : '',
+        'raw' => $result['text'],
+    ];
+}
+
+/**
+ * Moves the triaged URLs to the front, in the order triage gave them. Everything else keeps its
+ * original order behind them.
+ *
+ * @param array<string, array{url: string, title: string, content: string}> $sources
+ * @param list<string> $urls
+ * @return array<string, array{url: string, title: string, content: string}>
+ */
+function orderByPriority(array $sources, array $urls): array
+{
+    $ordered = [];
+    foreach ($urls as $url) {
+        $ordered[$url] = $sources[$url];
+    }
+    foreach ($sources as $url => $hit) {
+        if (!isset($ordered[$url])) {
+            $ordered[$url] = $hit;
+        }
+    }
+
+    return $ordered;
+}
+/**
  * Formats search hits as a numbered source list for the model prompt.
  *
  * @param list<array{url: string, title: string, content: string}> $results
@@ -289,7 +360,7 @@ function formatSources(array $results): string
  *
  * @return array{ok: bool, fatal: bool, text: string, error: string}
  */
-function callWorkersAI(string $apiToken, string $accountId, string $model, string $systemPrompt, string $userPrompt): array
+function callWorkersAI(string $apiToken, string $accountId, string $model, string $systemPrompt, string $userPrompt, int $maxTokens = 4096): array
 {
     $payload = [
         'messages' => [
@@ -297,7 +368,7 @@ function callWorkersAI(string $apiToken, string $accountId, string $model, strin
             ['role' => 'user', 'content' => $userPrompt],
         ],
         'temperature' => 0,
-        'max_tokens' => 4096,
+        'max_tokens' => $maxTokens,
     ];
 
     $url = "https://api.cloudflare.com/client/v4/accounts/{$accountId}/ai/run/{$model}";
@@ -333,7 +404,14 @@ function callWorkersAI(string $apiToken, string $accountId, string $model, strin
     $response = json_decode($body, true);
     $text = (string)($response['result']['choices'][0]['message']['content'] ?? '');
 
-    return ['ok' => true, 'fatal' => false, 'text' => $text, 'error' => ''];
+    return [
+        'ok' => true,
+        'fatal' => false,
+        'text' => $text,
+        'error' => '',
+        'neurons' => (float)($response['result']['usage']['neurons'] ?? 0),
+        'finish' => (string)($response['result']['choices'][0]['finish_reason'] ?? ''),
+    ];
 }
 
 /**
@@ -348,6 +426,17 @@ function extractCandidates(string $text): array
     }
 
     $parsed = json_decode($jsonMatch[0], true);
+    if ($parsed === null) {
+        // Models often write regex escapes such as \. straight into JSON, which is not a legal
+        // escape. Double any backslash that does not start a legal escape, then try again.
+        $backslash = chr(92);
+        $repaired = preg_replace_callback(
+            '/' . preg_quote($backslash, '/') . '(?![' . preg_quote($backslash, '/') . '"\/bfnrtu])/',
+            static fn (): string => $backslash . $backslash,
+            $jsonMatch[0]
+        );
+        $parsed = json_decode($repaired ?? '', true);
+    }
 
     return is_array($parsed['signatures'] ?? null) ? $parsed['signatures'] : [];
 }
@@ -441,6 +530,90 @@ function explainEmptyReply(string $text): string
     }
 
     return 'the "signatures" array is empty';
+}
+
+/**
+ * Bump this whenever the prompt, the validator or the shape checks change. Rejections were made
+ * under the old rules, so they are cleared and those candidates get another chance.
+ */
+const PIPELINE_RULES_VERSION = '2026-10-05.1';
+
+/**
+ * Loads the processed-source state kept on the state branch. A missing or unreadable file starts
+ * an empty state, so the first run needs no setup. Rejections from an earlier rules version are
+ * dropped here.
+ *
+ * @return array{rules_version: string, sources: array<string, array<string, string>>, rejected: array<string, array<string, string>>}
+ */
+function loadState(string $path): array
+{
+    $decoded = is_file($path) ? json_decode((string)file_get_contents($path), true) : null;
+    $sameRules = ($decoded['rules_version'] ?? null) === PIPELINE_RULES_VERSION;
+
+    return [
+        'rules_version' => PIPELINE_RULES_VERSION,
+        'sources' => is_array($decoded['sources'] ?? null) ? $decoded['sources'] : [],
+        'rejected' => $sameRules && is_array($decoded['rejected'] ?? null) ? $decoded['rejected'] : [],
+    ];
+}
+
+function saveState(string $path, array $state): void
+{
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+    file_put_contents($path, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+}
+
+/**
+ * Drops sources that have already been read. Each source is processed once; the state file is
+ * what stops the same article using a triage slot every day.
+ *
+ * @param array<string, array{url: string, title: string, content: string}> $sources Keyed by URL.
+ * @return array<string, array{url: string, title: string, content: string}>
+ */
+function excludeAlreadyRead(array $sources, array $state): array
+{
+    return array_filter($sources, static fn (string $url): bool => !isset($state['sources'][$url]), ARRAY_FILTER_USE_KEY);
+}
+
+/**
+ * True when this candidate ID was rejected under the current rules, so the model is not shown the
+ * same bad signature every day.
+ */
+function isRecentlyRejected(string $id, array $state): bool
+{
+    return isset($state['rejected'][$id]);
+}
+
+/**
+ * Records the sources read this run, the signature each accepted candidate came from, and the
+ * candidates rejected this run.
+ *
+ * @param list<string> $readUrls
+ * @param array{accepted: list<array<string, mixed>>, rejected: array<string, list<string>>} $applied
+ */
+function recordRun(array $state, array $readUrls, array $applied, string $date): array
+{
+    $state['rules_version'] = PIPELINE_RULES_VERSION;
+    foreach ($readUrls as $url) {
+        $state['sources'][$url] = [
+            'first_seen' => $state['sources'][$url]['first_seen'] ?? $date,
+            'outcome' => $state['sources'][$url]['outcome'] ?? 'read',
+        ];
+    }
+    foreach ($applied['accepted'] as $signature) {
+        $url = (string)($signature['source'] ?? '');
+        if (isset($state['sources'][$url])) {
+            $state['sources'][$url]['outcome'] = 'produced ' . ($signature['id'] ?? '?');
+        }
+    }
+    foreach ($applied['rejected'] as $id => $reasons) {
+        $state['rejected'][(string)$id] = ['reason' => implode('; ', $reasons), 'date' => $date];
+    }
+
+    return $state;
 }
 
 /**
@@ -577,6 +750,22 @@ function main(): int
         return 0;
     }
 
+    $statePath = getenv('STATE_PATH') ?: __DIR__ . '/../data/processed_sources.json';
+    $state = loadState($statePath);
+    $sources = excludeAlreadyRead($sources, $state);
+    if ($sources === []) {
+        echo "Every source was read within the refresh window; nothing new to propose.\n";
+        return 0;
+    }
+    echo 'New or stale sources to consider: ' . count($sources) . "\n";
+
+    file_put_contents($debugPath, "\n=== Candidate pool (" . count($sources) . ") ===\n" . implode("\n", array_keys($sources)) . "\n", FILE_APPEND);
+    $triage = triageSources($sources, $cfToken, $cfAccount);
+    file_put_contents($debugPath, "\n=== Triage: {$triage['neurons']} neurons, model " . TRIAGE_MODEL . " ===\n", FILE_APPEND);
+    file_put_contents($debugPath, "Picked: " . implode(', ', $triage['urls']) . ($triage['error'] !== '' ? " ({$triage['error']})" : '') . "\n" . $triage['raw'] . "\n", FILE_APPEND);
+    $sources = orderByPriority($sources, $triage['urls']);
+    echo 'Triage picked ' . count($triage['urls']) . ' source(s), used ' . $triage['neurons'] . " neurons.\n";
+
     // Replace the search snippet with the full page text for the first few sources that can be
     // fetched. A page that blocks us (403, bot checks) keeps its snippet.
     $successes = 0;
@@ -643,6 +832,7 @@ Reply with ONLY a compact JSON object, no prose, no markdown fences:
 PROMPT;
 
     $promptSources = selectSourcesForPrompt($sources);
+    $readUrls = array_column($promptSources, 'url');
     $sourceText = normalizeForMatch(implode("\n", array_column($promptSources, 'content')));
     $sourceList = array_map(
         static fn (array $s): string => '  - ' . $s['url'] . ' (' . mb_strlen($s['content']) . ' chars)',
@@ -662,6 +852,8 @@ PROMPT;
     }
 
     $rawReply = $result['text'];
+    file_put_contents($debugPath, "\n=== Drafting: {$result['neurons']} neurons, model {$model} ===\n", FILE_APPEND);
+    echo 'Drafting used ' . $result['neurons'] . " neurons.\n";
     file_put_contents($debugPath, "\n=== Raw model reply (" . strlen($rawReply) . " bytes) ===\n" . $rawReply . "\n", FILE_APPEND);
     echo 'Model reply: ' . strlen($rawReply) . ' bytes; first 300: ' . substr($rawReply, 0, 300) . "\n";
 
@@ -670,10 +862,19 @@ PROMPT;
         $reason = explainEmptyReply($rawReply);
         file_put_contents($debugPath, "\n=== No candidates: {$reason} ===\n", FILE_APPEND);
         echo "No candidates found in the model's response: {$reason}.\n";
+        // A reply that did not parse says nothing about the sources, so leave them unread and
+        // let the next run try again. A reply that parsed and was empty counts as read.
+        if (!str_starts_with($reason, 'the JSON')) {
+            saveState($statePath, recordRun($state, $readUrls, ['accepted' => [], 'rejected' => []], date('Y-m-d')));
+        }
         return 0;
     }
 
     $cleanFiles = listFilesRecursively($cleanCorpusDir);
+    $candidates = array_values(array_filter(
+        $candidates,
+        static fn (array $c): bool => !isRecentlyRejected((string)($c['id'] ?? ''), $state)
+    ));
     $applied = applyCandidates($candidates, $existing, $cleanFiles, $maxNew, $sourceText);
 
     $verdicts = ["\n=== Candidates (" . count($candidates) . ") ==="];
@@ -689,6 +890,7 @@ PROMPT;
 
     if ($applied['accepted'] === []) {
         echo "No vetted signatures to propose.\n";
+        saveState($statePath, recordRun($state, $readUrls, $applied, date('Y-m-d')));
         return 0;
     }
 
@@ -696,6 +898,8 @@ PROMPT;
         $signaturesPath,
         json_encode($applied['existing'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
     );
+
+    saveState($statePath, recordRun($state, $readUrls, $applied, date('Y-m-d')));
 
     echo 'Added ' . count($applied['accepted']) . ' vetted signature(s); rejected '
         . count($applied['rejected']) . ".\n";

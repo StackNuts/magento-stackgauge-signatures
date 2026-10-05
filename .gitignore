@@ -6,3 +6,9 @@ Thumbs.db
 
 # Debug log written by propose_signatures.php on each run.
 /propose_debug.log
+
+# Processed-source state. Lives on the state branch in CI; local runs write it here.
+/data/
+
+# Checked-out state branch in CI.
+/state/

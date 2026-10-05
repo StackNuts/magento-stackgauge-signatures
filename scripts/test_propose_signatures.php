@@ -98,6 +98,35 @@ $manyCandidates = array_map(
 $result = applyCandidates($manyCandidates, $existing, $cleanFiles, 3);
 check($failures, count($result['accepted']) === 3, 'maxNew should cap how many candidates are accepted');
 
+
+// Models write regex escapes such as \. straight into JSON. The repair must recover them.
+$escaped = extractCandidates('{"signatures":[{"id":"esc-test","name":"n","severity":"critical","target":["pub_php"],"pattern_type":"regex","pattern":"/a\.b\-c/","description":"d","test_should_match":["x"],"test_should_not_match":["y"]}]}');
+check($failures, count($escaped) === 1 && ($escaped[0]['pattern'] ?? '') === '/a\.b\-c/', 'extractCandidates should repair invalid JSON escapes such as \. and \-');
+
+// 5a. Processed-source state: each source is read once; rejections persist until the rules change.
+$stateSources = [
+    'https://already-read.example' => ['url' => 'https://already-read.example', 'title' => 't', 'content' => 'c'],
+    'https://never-read.example' => ['url' => 'https://never-read.example', 'title' => 't', 'content' => 'c'],
+];
+$stateFixture = [
+    'rules_version' => PIPELINE_RULES_VERSION,
+    'sources' => ['https://already-read.example' => ['first_seen' => '2026-06-01', 'outcome' => 'read']],
+    'rejected' => ['known-bad' => ['reason' => 'x', 'date' => '2026-10-04']],
+];
+$fresh = excludeAlreadyRead($stateSources, $stateFixture);
+check($failures, !isset($fresh['https://already-read.example']), 'a source already read should be skipped, however long ago');
+check($failures, isset($fresh['https://never-read.example']), 'an unseen source should be considered');
+check($failures, isRecentlyRejected('known-bad', $stateFixture), 'a rejection under the current rules should be skipped');
+check($failures, !isRecentlyRejected('unknown-id', $stateFixture), 'an unknown candidate should not be skipped');
+
+$tmpState = sys_get_temp_dir() . '/propose-state-test-' . getmypid() . '.json';
+file_put_contents($tmpState, json_encode(['rules_version' => 'old-rules', 'sources' => [], 'rejected' => ['stale' => ['reason' => 'x', 'date' => '2026-01-01']]]));
+$loaded = loadState($tmpState);
+check($failures, $loaded['rejected'] === [], 'rejections from an older rules version should be cleared on load');
+file_put_contents($tmpState, json_encode(['rules_version' => PIPELINE_RULES_VERSION, 'sources' => [], 'rejected' => ['kept' => ['reason' => 'x', 'date' => '2026-10-05']]]));
+check($failures, isset(loadState($tmpState)['rejected']['kept']), 'rejections under the current rules should be kept on load');
+unlink($tmpState);
+
 // 5b. Grounding and shape checks reject weak candidates, and keep grounded ones.
 $groundSource = normalizeForMatch('Attackers write eval(base64_decode($_POST["x"])) into pub/media files.');
 $weak = [
@@ -147,5 +176,5 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo 'All ' . 8 . " propose_signatures.php self-tests passed.\n";
+echo 'All ' . 10 . " propose_signatures.php self-tests passed.\n";
 exit(0);
