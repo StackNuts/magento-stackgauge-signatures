@@ -1,14 +1,18 @@
 name: Propose new signatures
 
-# Asks Gemini (free-tier API, Google Search grounding) to research current Magento/Adobe
+# Searches the web with Tavily and asks Cloudflare Workers AI to turn the results into candidate
+# signatures for current Magento/Adobe
 # Commerce webshell and Magecart indicators of compromise, auto-validates every candidate
 # locally, and opens a PULL REQUEST for human review. AI-written detection is never merged
 # automatically - the validate.yml gate runs again on the PR itself regardless.
 #
 # Setup (once):
-#   gh secret set GEMINI_API_KEY --repo StackNuts/magento-stackgauge-signatures
-#   # optional model override (default gemini-2.5-flash):
-#   gh variable set GEMINI_MODEL --repo StackNuts/magento-stackgauge-signatures --body gemini-2.5-flash
+#   gh secret set CLOUDFLARE_API_KEY --repo StackNuts/magento-stackgauge-signatures
+#   gh secret set CLOUDFLARE_ACCOUNT_ID --repo StackNuts/magento-stackgauge-signatures
+#   gh secret set TAVILY_API_KEY --repo StackNuts/magento-stackgauge-signatures
+#   gh secret set BRAVE_SEARCH_API_KEY --repo StackNuts/magento-stackgauge-signatures
+#   # optional model override (default @cf/meta/llama-3.3-70b-instruct-fp8-fast):
+#   gh variable set WORKERS_AI_MODEL --repo StackNuts/magento-stackgauge-signatures --body @cf/meta/llama-3.3-70b-instruct-fp8-fast
 #   # allow Actions to open PRs:
 #   gh api -X PUT repos/StackNuts/magento-stackgauge-signatures/actions/permissions/workflow \
 #     -F default_workflow_permissions=write -F can_approve_pull_request_reviews=true
@@ -38,8 +42,11 @@ jobs:
 
       - name: Generate candidate signatures
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
+          WORKERS_AI_MODEL: ${{ vars.WORKERS_AI_MODEL }}
         run: php scripts/propose_signatures.php
 
       - name: Open / update pull request

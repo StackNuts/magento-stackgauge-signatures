@@ -21,12 +21,13 @@ of the module's own release cycle.
 
 ```jsonc
 {
-  "version": "2026.10.0",
+  "version": "2026.10.1",
   "signatures": [
     {
       "id": "magecart-atob-eval",
       "name": "eval() of base64-decoded script content",
       "severity": "critical",
+      "source": "",
       "target": ["cms_content", "design_config"],
       "pattern_type": "literal",
       "pattern": "eval(atob(",
@@ -38,11 +39,16 @@ of the module's own release cycle.
 }
 ```
 
+- `severity` is `"critical"` (a confirmed indicator of compromise) or `"warning"` (a heuristic that
+  needs human review).
+- `source` is the URL of the write-up the signature was drawn from. Leave it as an empty string
+  (`""`) if there is no known origin. It is recommended, but not validated.
 - `pattern_type` is `"literal"` (a plain substring check) or `"regex"` (a PHP-PCRE pattern with
   delimiters/flags, e.g. `"/pattern/i"`, `preg_match`-compatible). Prefer literal where a plain
   substring suffices.
 - `target` is one or more of: `pub_php` (PHP files under `pub/media`/`pub/static`),
-  `cms_content` (CMS block/page HTML), `design_config` (admin-editable HTML/JS config values).
+  `cms_content` (CMS block/page HTML), `design_config` (admin-editable HTML/JS config values),
+  `generated_php` (PHP under `generated/code/`, e.g. interceptor classes a backdoor can rewrite).
   A consuming tool only needs to apply a signature to content of a type it declares a target
   for.
 - `test_should_match` / `test_should_not_match` are required for every signature - they're
@@ -70,16 +76,19 @@ php scripts/validate_signatures.php
 
 ## Keeping the set current
 
-`scripts/propose_signatures.php` asks Gemini (with Google Search grounding, on its free API
-tier) to research current Magento/Adobe Commerce webshell and skimmer IoCs, then vets every
-candidate through the exact same validator above before writing it. Nothing failing validation
-is ever written, and nothing is ever auto-merged - `.github/workflows/propose-signatures.yml`
+`scripts/propose_signatures.php` searches the web with Tavily for current Magento/Adobe Commerce
+webshell and skimmer IoCs, asks Cloudflare Workers AI to turn the results into candidate
+signatures (each with a `source` URL), then vets every candidate through the exact same validator
+above before writing it. Nothing failing validation is ever written, and nothing is ever auto-merged - `.github/workflows/propose-signatures.yml`
 runs this daily and opens a pull request for human review, same as any other contribution.
 
 To enable it on a fork:
 
 ```bash
-gh secret set GEMINI_API_KEY --repo <you>/magento-stackgauge-signatures
+gh secret set CLOUDFLARE_API_KEY --repo <you>/magento-stackgauge-signatures
+gh secret set CLOUDFLARE_ACCOUNT_ID --repo <you>/magento-stackgauge-signatures
+gh secret set TAVILY_API_KEY --repo <you>/magento-stackgauge-signatures
+gh secret set BRAVE_SEARCH_API_KEY --repo <you>/magento-stackgauge-signatures
 gh api -X PUT repos/<you>/magento-stackgauge-signatures/actions/permissions/workflow \
   -F default_workflow_permissions=write -F can_approve_pull_request_reviews=true
 ```
@@ -89,6 +98,15 @@ gh api -X PUT repos/<you>/magento-stackgauge-signatures/actions/permissions/work
 See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests adding or refining signatures are
 welcome - include `test_should_match`/`test_should_not_match` samples and make sure
 `validate_signatures.php` passes locally first.
+
+## Origins
+
+This project was inspired by [c0defusi0n/securityscanner-signatures](https://github.com/c0defusi0n/securityscanner-signatures),
+which showed how a community-maintained, signature-based scanner database could be structured
+and shared.
+
+Every signature has a `source` field linking to the write-up it was drawn from. Signatures
+without a known origin leave that field blank.
 
 ## License
 

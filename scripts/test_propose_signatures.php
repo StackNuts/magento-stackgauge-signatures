@@ -1,7 +1,7 @@
 <?php
 /**
- * Exercises propose_signatures.php's vetting/parsing logic with a canned, fake Gemini
- * response - no network access or GEMINI_API_KEY needed. Covers: a good candidate gets
+ * Exercises propose_signatures.php's vetting/parsing logic with a canned, fake Workers AI
+ * response - no network access or API keys needed. Covers: a good candidate gets
  * accepted and appended; a candidate reusing an existing id is rejected; a candidate that
  * false-positives against corpus/clean/ is rejected; prose/fences around the JSON are
  * tolerated; nothing is ever written to the real signatures.json (this works against a
@@ -102,7 +102,7 @@ check($failures, count($result['accepted']) === 3, 'maxNew should cap how many c
 $prBody = buildPrBody(
     [['id' => 'a', 'severity' => 'critical', 'description' => 'd']],
     ['b' => ['some reason']],
-    'gemini-2.5-flash'
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
 );
 check($failures, str_contains($prBody, 'a'), 'PR body should mention the accepted id');
 check($failures, str_contains($prBody, 'some reason'), 'PR body should mention the rejection reason');
