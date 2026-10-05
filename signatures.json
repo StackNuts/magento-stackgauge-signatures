@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.4",
+    "version": "2026.10.5",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -414,6 +414,100 @@
             ],
             "test_should_not_match": [
                 "if (isset($_POST[\"email\"])) { exit; }"
+            ]
+        },
+        {
+            "id": "stylesmuggler-exfil-host-457cfa2fb7",
+            "name": "StyleSmuggler exfiltration host fragment",
+            "severity": "critical",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "457cfa2fb7",
+            "description": "Host label used by the StyleSmuggler payload when it calls out to its server. Source: Sansec, StyleSmuggler 0-day.",
+            "test_should_match": [
+                "$x = \"https://457cfa2fb7.example/\";"
+            ],
+            "test_should_not_match": [
+                "$x = \"https://example.com/\";"
+            ]
+        },
+        {
+            "id": "cosmicsting-websocket-base64",
+            "name": "Base64-encoded WebSocket endpoint in skimmer code",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "d3NzOi8vamd1ZXVyeXN0YXRpYy54eXo",
+            "description": "Base64 of a WebSocket URL to a skimmer command host, seen in CosmicSting-era skimmer code. Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "var u = atob(\"d3NzOi8vamd1ZXVyeXN0YXRpYy54eXo=\");"
+            ],
+            "test_should_not_match": [
+                "var u = atob(\"aHR0cHM6Ly9leGFtcGxlLmNvbQ==\");"
+            ]
+        },
+        {
+            "id": "webshell-base64-eval-obfuscated",
+            "name": "Obfuscated eval(base64_decode()) built from base64 text",
+            "severity": "critical",
+            "source": "https://www.mgt-commerce.com/blog/magento-sitescanner-malware/",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "ZXZhbChiYXNlNjRfZGV",
+            "description": "Base64 prefix of eval(base64_de, used to hide the eval call inside a second base64 layer. Source: MGT Commerce, Magento SiteScanner malware.",
+            "test_should_match": [
+                "$x = base64_decode(\"ZXZhbChiYXNlNjRfZGVj\");"
+            ],
+            "test_should_not_match": [
+                "$x = base64_decode(\"aGVsbG8=\");"
+            ]
+        },
+        {
+            "id": "template-attack-cryption-block",
+            "name": "Base64 cryption block from the Magento template attack",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "JGYwPWZhbHNlO2lmKGlzc2V0",
+            "description": "Base64 prefix of a PHP block that sets a flag and checks a request key before running code. Source: Sansec, Magento 2 template attacks.",
+            "test_should_match": [
+                "$c = base64_decode(\"JGYwPWZhbHNlO2lmKGlzc2V0KCR3MSk=\");"
+            ],
+            "test_should_not_match": [
+                "$c = base64_decode(\"SGVsbG8gd29ybGQ=\");"
+            ]
+        },
+        {
+            "id": "template-attack-post-ata-decode",
+            "name": "Decodes a POST value straight into eval",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "base64_decode($_POST[\"ata\"])",
+            "description": "Webshell line that base64-decodes a POST parameter and evals it, from the template attack write-up. Source: Sansec, Magento 2 template attacks.",
+            "test_should_match": [
+                "$v = base64_decode($_POST[\"ata\"]);"
+            ],
+            "test_should_not_match": [
+                "$v = base64_decode($_POST[\"data\"]);"
             ]
         }
     ]
