@@ -3,3 +3,6 @@
 Thumbs.db
 
 /.env
+
+# Debug log written by propose_signatures.php on each run.
+/propose_debug.log

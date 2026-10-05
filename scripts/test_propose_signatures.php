@@ -98,6 +98,38 @@ $manyCandidates = array_map(
 $result = applyCandidates($manyCandidates, $existing, $cleanFiles, 3);
 check($failures, count($result['accepted']) === 3, 'maxNew should cap how many candidates are accepted');
 
+// 5b. Grounding and shape checks reject weak candidates, and keep grounded ones.
+$groundSource = normalizeForMatch('Attackers write eval(base64_decode($_POST["x"])) into pub/media files.');
+$weak = [
+    'path-literal' => ['pattern_type' => 'literal', 'pattern' => 'pub/media/custom_options/quote/', 'test_should_match' => ['pub/media/custom_options/quote/'], 'test_should_not_match' => ['pub/media/catalog/']],
+    'char-class-alternation' => ['pattern_type' => 'regex', 'pattern' => '/process [kworker|fc-cache]/', 'test_should_match' => ['process kworker'], 'test_should_not_match' => ['process list']],
+    'ungrounded' => ['pattern_type' => 'literal', 'pattern' => 'zzz-never-in-any-source-qqq', 'test_should_match' => ['zzz-never-in-any-source-qqq'], 'test_should_not_match' => ['harmless text']],
+];
+$weakSet = [];
+foreach ($weak as $name => $parts) {
+    $weakSet[] = array_merge(['id' => "weak-{$name}", 'name' => 'n', 'severity' => 'critical', 'target' => ['pub_php'], 'description' => 'd'], $parts);
+}
+$weakResult = applyCandidates($weakSet, $existing, $cleanFiles, 10, $groundSource);
+check($failures, count($weakResult['accepted']) === 0, 'weak candidates must not be accepted');
+check($failures, count($weakResult['rejected']) === 3, 'all three weak candidates should be rejected');
+check($failures, str_contains($weakResult['rejected']['weak-path-literal'][0] ?? '', 'file path'), 'path literal should be rejected as a file path');
+check($failures, str_contains($weakResult['rejected']['weak-char-class-alternation'][0] ?? '', 'character class'), 'alternation in a character class should be rejected');
+check($failures, str_contains($weakResult['rejected']['weak-ungrounded'][0] ?? '', 'does not appear'), 'a pattern absent from the sources should be rejected');
+
+$groundedResult = applyCandidates([[
+    'id' => 'grounded-eval', 'name' => 'n', 'severity' => 'critical', 'target' => ['pub_php'], 'description' => 'd',
+    'pattern_type' => 'literal', 'pattern' => 'eval(base64_decode(',
+    'test_should_match' => ['<?php eval(base64_decode($x)); ?>'], 'test_should_not_match' => ['<?php echo 1; ?>'],
+]], $existing, $cleanFiles, 10, $groundSource);
+check($failures, count($groundedResult['accepted']) === 1, 'a pattern present in the sources should be accepted');
+
+$proseResult = applyCandidates([['id' => 'prose-marker', 'name' => 'n', 'severity' => 'critical', 'target' => ['cms_content'], 'description' => 'd', 'pattern_type' => 'regex', 'pattern' => '/API authorization token|secret Magento cryptographic keys/', 'test_should_match' => ['API authorization token'], 'test_should_not_match' => ['harmless text']]], $existing, $cleanFiles, 10, normalizeForMatch('the API authorization token and secret Magento cryptographic keys'));
+check($failures, str_contains($proseResult['rejected']['prose-marker'][0] ?? '', 'plain English prose'), 'plain-English patterns should be rejected as prose');
+
+check($failures, longestRegexLiteral('/eval\s*\(\s*base64_decode\s*\(/i') === 'base64_decode', 'longestRegexLiteral should return the longest literal run');
+check($failures, explainEmptyReply('') === 'the model returned an empty reply', 'explainEmptyReply should report an empty reply');
+check($failures, explainEmptyReply('no braces') === 'the reply contains no JSON object', 'explainEmptyReply should report a missing JSON object');
+check($failures, str_contains(explainEmptyReply('{"signatures": []}'), 'empty'), 'explainEmptyReply should report an empty signatures array');
 // 6. buildPrBody() mentions both accepted and rejected entries.
 $prBody = buildPrBody(
     [['id' => 'a', 'severity' => 'critical', 'description' => 'd']],
@@ -115,5 +147,5 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo 'All ' . 6 . " propose_signatures.php self-tests passed.\n";
+echo 'All ' . 8 . " propose_signatures.php self-tests passed.\n";
 exit(0);

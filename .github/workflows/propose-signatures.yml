@@ -71,3 +71,11 @@ jobs:
           else
             echo "PR already open for $BRANCH; branch updated with the latest proposal."
           fi
+
+      - name: Upload debug log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: propose-signatures-debug
+          path: propose_debug.log
+          if-no-files-found: ignore

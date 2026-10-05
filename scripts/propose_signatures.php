@@ -353,6 +353,97 @@ function extractCandidates(string $text): array
 }
 
 /**
+ * Lowercases and collapses whitespace, so grounding checks ignore line breaks and indentation.
+ */
+function normalizeForMatch(string $text): string
+{
+    return mb_strtolower(preg_replace('/\s+/', ' ', $text) ?? $text);
+}
+
+/**
+ * Returns the longest run of literal characters in a regex. That run has to appear in a source
+ * for the regex to be grounded in published content.
+ */
+function longestRegexLiteral(string $pattern): string
+{
+    $body = preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern;
+    // Drop escape sequences such as \s or \. by replacing the backslash and the character after it.
+    $body = preg_replace('/' . preg_quote(chr(92), '/') . './s', ' ', $body) ?? $body;
+    $parts = preg_split('/[\[\]\(\)\|\*\+\?\{\}\^\$\.\s]+/', $body) ?: [];
+
+    $longest = '';
+    foreach ($parts as $part) {
+        if (mb_strlen($part) > mb_strlen($longest)) {
+            $longest = $part;
+        }
+    }
+
+    return normalizeForMatch($longest);
+}
+
+/**
+ * Rejects candidates that look grounded but are not: a bare file path used as a content literal,
+ * a regex character class that holds alternatives (e.g. [a|b], which matches single characters),
+ * or a pattern whose literal text never appears in the sources the model was given.
+ *
+ * @param array<string, mixed> $candidate
+ * @return string|null The rejection reason, or null if the candidate is acceptable.
+ */
+function checkCandidateShape(array $candidate, string $sourceText): ?string
+{
+    $pattern = (string)($candidate['pattern'] ?? '');
+    $type = $candidate['pattern_type'] ?? '';
+
+    if ($type === 'literal' && preg_match('#^[\w.\-]+(/[\w.\-]*)+/?$#', $pattern) === 1) {
+        return 'pattern is a file path, not content a scanner can match inside a file';
+    }
+
+    // Letters, spaces and alternation bars only means English prose, which matches any article
+    // about the attack and not the attack itself. Real markers contain code or IOC punctuation.
+    $bare = $type === 'regex' ? (preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern) : $pattern;
+    if (preg_match('/^[\p{L}\s|]+$/u', $bare) === 1) {
+        return 'pattern is plain English prose, which would match articles about the attack rather than the attack itself';
+    }
+
+    if ($type === 'regex' && preg_match('/\[[^\]]*\|[^\]]*\]/', $pattern) === 1) {
+        return 'regex has "|" inside a character class; use (a|b) for alternatives';
+    }
+
+    $literal = $type === 'regex' ? longestRegexLiteral($pattern) : normalizeForMatch($pattern);
+    if (mb_strlen($literal) < 6) {
+        return 'pattern has too little literal text to verify against the sources';
+    }
+
+    if ($sourceText !== '' && !str_contains($sourceText, $literal)) {
+        return 'pattern text "' . mb_substr($literal, 0, 60) . '" does not appear in any source the model was given';
+    }
+
+    return null;
+}
+
+/**
+ * Says why a model reply produced no candidates, for the log.
+ */
+function explainEmptyReply(string $text): string
+{
+    if (trim($text) === '') {
+        return 'the model returned an empty reply';
+    }
+    if (!preg_match('/\{.*\}/s', $text, $jsonMatch)) {
+        return 'the reply contains no JSON object';
+    }
+    $parsed = json_decode($jsonMatch[0], true);
+    if ($parsed === null) {
+        return 'the JSON did not parse: ' . json_last_error_msg();
+    }
+    if (!isset($parsed['signatures']) || !is_array($parsed['signatures'])) {
+        return 'the JSON has no "signatures" array';
+    }
+
+    return 'the "signatures" array is empty';
+}
+
+/**
  * Vets each candidate (in order, up to $maxNew) against duplicate ids and
  * validateSignatureSet() - the same gate the CI validator applies to the whole file. Pure: no
  * I/O, so this is the part the tests exercise directly.
@@ -360,9 +451,10 @@ function extractCandidates(string $text): array
  * @param list<array<string, mixed>> $candidates
  * @param array<string, mixed> $existing Decoded signatures.json.
  * @param list<string> $cleanFiles Absolute paths, pre-loaded via listFilesRecursively().
+ * @param string $sourceText Normalized text of the sources given to the model; empty skips grounding.
  * @return array{accepted: list<array<string, mixed>>, rejected: array<string, list<string>>, existing: array<string, mixed>}
  */
-function applyCandidates(array $candidates, array $existing, array $cleanFiles, int $maxNew): array
+function applyCandidates(array $candidates, array $existing, array $cleanFiles, int $maxNew, string $sourceText = ''): array
 {
     $existingIds = array_column($existing['signatures'], 'id');
     $accepted = [];
@@ -373,6 +465,12 @@ function applyCandidates(array $candidates, array $existing, array $cleanFiles, 
 
         if (in_array($id, $existingIds, true)) {
             $rejected[$id] = ['duplicate of an existing signature id'];
+            continue;
+        }
+
+        $shapeError = checkCandidateShape($candidate, $sourceText);
+        if ($shapeError !== null) {
+            $rejected[$id] = [$shapeError];
             continue;
         }
 
@@ -431,6 +529,8 @@ function main(): int
     $cleanCorpusDir = getenv('CLEAN_CORPUS_DIR') ?: __DIR__ . '/../corpus/clean';
     $maxNew = (int)(getenv('MAX_NEW') ?: 5);
     $prBodyPath = getenv('PR_BODY_PATH') ?: __DIR__ . '/../pr_body.md';
+    $debugPath = getenv('DEBUG_LOG_PATH') ?: __DIR__ . '/../propose_debug.log';
+    file_put_contents($debugPath, 'Run started ' . date('c') . "\n");
 
     $cfToken = getenv('CLOUDFLARE_API_KEY');
     $cfAccount = getenv('CLOUDFLARE_ACCOUNT_ID');
@@ -542,7 +642,16 @@ Reply with ONLY a compact JSON object, no prose, no markdown fences:
 "test_should_match":["..."],"test_should_not_match":["..."],"source":"URL of the write-up it came from"}]}
 PROMPT;
 
-    $userPrompt = "Sources:\n\n" . formatSources(selectSourcesForPrompt($sources))
+    $promptSources = selectSourcesForPrompt($sources);
+    $sourceText = normalizeForMatch(implode("\n", array_column($promptSources, 'content')));
+    $sourceList = array_map(
+        static fn (array $s): string => '  - ' . $s['url'] . ' (' . mb_strlen($s['content']) . ' chars)',
+        $promptSources
+    );
+    file_put_contents($debugPath, "Model: {$model}\nSources in prompt (" . count($promptSources) . "):\n" . implode("\n", $sourceList) . "\n", FILE_APPEND);
+    echo 'Sources in prompt: ' . count($promptSources) . "\n";
+
+    $userPrompt = "Sources:\n\n" . formatSources($promptSources)
         . "\n\nPropose up to {$maxNew} new, high-confidence detection signatures supported by the "
         . "sources above.";
 
@@ -552,14 +661,29 @@ PROMPT;
         return $result['fatal'] ? 1 : 0;
     }
 
-    $candidates = extractCandidates($result['text']);
+    $rawReply = $result['text'];
+    file_put_contents($debugPath, "\n=== Raw model reply (" . strlen($rawReply) . " bytes) ===\n" . $rawReply . "\n", FILE_APPEND);
+    echo 'Model reply: ' . strlen($rawReply) . ' bytes; first 300: ' . substr($rawReply, 0, 300) . "\n";
+
+    $candidates = extractCandidates($rawReply);
     if ($candidates === []) {
-        echo "No candidates found in the model's response.\n";
+        $reason = explainEmptyReply($rawReply);
+        file_put_contents($debugPath, "\n=== No candidates: {$reason} ===\n", FILE_APPEND);
+        echo "No candidates found in the model's response: {$reason}.\n";
         return 0;
     }
 
     $cleanFiles = listFilesRecursively($cleanCorpusDir);
-    $applied = applyCandidates($candidates, $existing, $cleanFiles, $maxNew);
+    $applied = applyCandidates($candidates, $existing, $cleanFiles, $maxNew, $sourceText);
+
+    $verdicts = ["\n=== Candidates (" . count($candidates) . ") ==="];
+    foreach ($applied['accepted'] as $a) {
+        $verdicts[] = "  ACCEPTED {$a['id']}";
+    }
+    foreach ($applied['rejected'] as $id => $reasons) {
+        $verdicts[] = "  REJECTED {$id}: " . implode('; ', $reasons);
+    }
+    file_put_contents($debugPath, implode("\n", $verdicts) . "\n", FILE_APPEND);
 
     file_put_contents($prBodyPath, buildPrBody($applied['accepted'], $applied['rejected'], $model));
 
