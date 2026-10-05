@@ -1,14 +1,12 @@
-/pr_body.md
 /.DS_Store
 Thumbs.db
 
 /.env
 
-# Debug log written by propose_signatures.php on each run.
-/propose_debug.log
+
 
 # Processed-source state. Lives on the state branch in CI; local runs write it here.
-/data/
+/data/processed_sources.json
 
 # Checked-out state branch in CI.
 /state/

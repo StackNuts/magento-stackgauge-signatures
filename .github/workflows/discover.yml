@@ -1,0 +1,113 @@
+name: Find new research articles
+
+# Reads new Sansec research and recent feed items, extracts indicator strings, and opens a PULL
+# REQUEST listing them for human review. Nothing here writes signatures; those are written by hand
+# from the candidates and checked by validate.yml.
+#
+# Setup (once): allow Actions to open PRs (Settings -> Actions -> General), and the repo workflow
+# token needs write access so the state branch can be saved.
+
+on:
+  schedule:
+    - cron: '0 9 * * *'    # daily 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: discover
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      # The processed-source state lives on the "state" branch so it persists between runs. The
+      # first run has no state branch yet; the save step creates it.
+      - name: Look for state branch
+        id: state
+        run: |
+          if git ls-remote --exit-code --heads origin state >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No state branch yet; the save step will create it."
+          fi
+
+      - name: Check out state branch
+        if: steps.state.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: state
+          path: state
+          fetch-depth: 1
+
+      - name: Find and read new articles
+        env:
+          STATE_PATH: ${{ github.workspace }}/state/processed_sources.json
+          CANDIDATES_DIR: ${{ github.workspace }}/data/candidates
+        run: php scripts/discover.php
+
+      - name: Run self-tests
+        run: |
+          php scripts/test_discover.php
+          php scripts/validate_signatures.php
+
+      - name: Open / update pull request with candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -d data/candidates ] || [ -z "$(ls -A data/candidates)" ]; then
+            echo "No new articles to review."
+            exit 0
+          fi
+          BRANCH=auto/candidates
+          git config user.name "stacknuts-bot"
+          git config user.email "stack.nuts@outlook.com"
+          git checkout -b "$BRANCH"
+          git add -f data/candidates
+          git commit -m "Candidate indicators from new research articles"
+          git push -f origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "New candidate indicators for review" \
+              --body "Indicator strings extracted from new research articles. Write signatures from these by hand, then merge."
+          else
+            echo "PR already open for $BRANCH; branch updated."
+          fi
+
+      - name: Save processed-source state
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if [ ! -d state/.git ]; then
+            mkdir -p state
+            git -C state init -q
+            git -C state checkout -q -b state
+            git -C state remote add origin "https://github.com/${{ github.repository }}.git"
+            git -C state config http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          fi
+          cd state
+          if [ ! -f processed_sources.json ]; then
+            echo "No state written this run."
+            exit 0
+          fi
+          git config user.name "stacknuts-bot"
+          git config user.email "stack.nuts@outlook.com"
+          git add processed_sources.json
+          if git diff --cached --quiet; then
+            echo "State unchanged."
+            exit 0
+          fi
+          git commit -q -m "Update processed-source state"
+          git push origin HEAD:state

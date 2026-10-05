@@ -1,11 +1,7 @@
 <?php
 /**
  * CLI entry point for the CI gate: validates every signature in signatures.json via
- * lib/matching.php's validateSignatureSet() - the same function propose_signatures.php uses to
- * vet one candidate before it's ever written to the file. See that file's own docblock for
- * what's actually being checked.
- *
- * Usage: php scripts/validate_signatures.php [path/to/signatures.json] [path/to/corpus/clean]
+ * lib/matching.php's validateSignatureSet(). See that file for what is checked.
  */
 
 declare(strict_types=1);

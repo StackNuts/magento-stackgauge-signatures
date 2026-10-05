@@ -59,8 +59,7 @@ of the module's own release cycle.
 
 Every signature must pass `scripts/validate_signatures.php` before it can be merged - this runs
 automatically on every push and pull request (see `.github/workflows/validate.yml`), and is the
-same check `scripts/propose_signatures.php` applies to an AI-proposed candidate before it's
-ever written to `signatures.json`.
+same check applied before a hand-written signature is merged.
 
 It checks, per signature: required fields and allowed values, no duplicate `id`, a regex
 pattern actually compiles, every `test_should_match` sample matches and every
@@ -76,23 +75,19 @@ php scripts/validate_signatures.php
 
 ## Keeping the set current
 
-`scripts/propose_signatures.php` searches the web with Tavily for current Magento/Adobe Commerce
-webshell and skimmer IoCs, asks Cloudflare Workers AI to turn the results into candidate
-signatures (each with a `source` URL), then vets every candidate through the exact same validator
-above before writing it. Nothing failing validation is ever written, and nothing is ever auto-merged - `.github/workflows/propose-signatures.yml`
-runs this daily and opens a pull request for human review, same as any other contribution.
+`scripts/discover.php` reads the Sansec research sitemap and the RSS feeds from Sucuri, Malwarebytes
+and The Hacker News, keeps articles published since its last run, and extracts the indicator strings
+found in each one (code blocks, base64 blobs, domains, IP addresses, PHP file names and suspicious
+calls). It writes them to `data/candidates/` and the workflow opens a pull request listing them. The
+script never writes signatures: a person writes each signature by hand from the candidates, with a
+`source` link, and the validator checks it.
 
-To enable it on a fork:
+Each article is processed once. The state file on the `state` branch records what has been read, so
+each run only handles new material. The workflow is `.github/workflows/discover.yml` and runs daily.
 
-```bash
-gh secret set CLOUDFLARE_API_KEY --repo <you>/magento-stackgauge-signatures
-gh secret set CLOUDFLARE_ACCOUNT_ID --repo <you>/magento-stackgauge-signatures
-gh secret set TAVILY_API_KEY --repo <you>/magento-stackgauge-signatures
-gh secret set BRAVE_SEARCH_API_KEY --repo <you>/magento-stackgauge-signatures
-gh api -X PUT repos/<you>/magento-stackgauge-signatures/actions/permissions/workflow \
-  -F default_workflow_permissions=write -F can_approve_pull_request_reviews=true
-```
-
+To enable it on a fork, allow Actions to create pull requests (Settings → Actions → General) and make
+sure the workflow token can write to the repository, so the state branch can be saved. No API keys
+are needed.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests adding or refining signatures are

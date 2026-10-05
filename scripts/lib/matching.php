@@ -1,10 +1,7 @@
 <?php
 /**
- * Shared signature-matching and vetting logic, used by both validate_signatures.php (the CI
- * gate, checking the whole file) and propose_signatures.php (checking one AI-proposed
- * candidate in isolation before it's ever written to signatures.json). Keeping this as pure
- * functions with no top-level script behaviour means both callers run the exact same checks -
- * there is only one definition of "a signature is good enough to merge."
+ * Signature matching and vetting, used by validate_signatures.php (the CI gate). Pure functions with
+ * no top-level script behaviour, so the same checks can be called from tests as well.
  */
 
 declare(strict_types=1);

@@ -2,8 +2,7 @@ name: Validate signatures
 
 # The CI gate: every signature must compile, pass its own test samples, and - independently of
 # those samples - score zero matches against corpus/clean/. Runs on every push and PR so a bad
-# signature can never land on main, whether it came from a human contributor or the
-# propose-signatures workflow's own pull request.
+# signature can never land on main, whether it came from a human contributor or a pull request.
 
 on:
   push:
@@ -21,4 +20,4 @@ jobs:
           php-version: '8.3'
 
       - run: php scripts/validate_signatures.php
-      - run: php scripts/test_propose_signatures.php
+      - run: php scripts/test_discover.php
