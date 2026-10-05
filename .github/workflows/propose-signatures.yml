@@ -38,13 +38,23 @@ jobs:
 
       # Processed-source state lives on the "state" branch so it persists between runs. The first
       # run has no state branch yet; the save step creates it.
+      - name: Look for state branch
+        id: state
+        run: |
+          if git ls-remote --exit-code --heads origin state >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No state branch yet; the save step will create it."
+          fi
+
       - name: Check out state branch
+        if: steps.state.outputs.exists == 'true'
         uses: actions/checkout@v4
         with:
           ref: state
           path: state
           fetch-depth: 1
-        continue-on-error: true
 
       - uses: shivammathur/setup-php@v2
         with:
