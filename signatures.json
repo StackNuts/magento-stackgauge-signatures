@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.5",
+    "version": "2026.10.6",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -508,6 +508,64 @@
             ],
             "test_should_not_match": [
                 "$v = base64_decode($_POST[\"data\"]);"
+            ]
+        },
+        {
+            "id": "svg-skimmer-localstorage-marker",
+            "name": "Skimmer localStorage marker _mgx_cv",
+            "severity": "critical",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "_mgx_cv",
+            "description": "localStorage key the SVG-onload skimmer sets so it does not run twice. Source: Sansec, SVG onload Tag hides Magecart skimmer.",
+            "test_should_match": [
+                "localStorage.setItem('_mgx_cv', '1');"
+            ],
+            "test_should_not_match": [
+                "localStorage.setItem('cart_id', '1');"
+            ]
+        },
+        {
+            "id": "skimmer-exfil-ip-23-137-249-67",
+            "name": "Skimmer exfiltration IP 23.137.249.67",
+            "severity": "warning",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "23.137.249.67",
+            "description": "Address that the SVG-onload skimmer domains resolve to. IP indicators go stale quickly; review before relying on it. Source: Sansec, SVG onload Tag hides Magecart skimmer.",
+            "test_should_match": [
+                "fetch(\"https://23.137.249.67/fb_metrics\")"
+            ],
+            "test_should_not_match": [
+                "fetch(\"https://23.137.249.6/fb_metrics\")"
+            ]
+        },
+        {
+            "id": "hunter-skimmer-server-193-201-9-116",
+            "name": "Server hosting the Hunter skimmer domains",
+            "severity": "warning",
+            "source": "https://www.malwarebytes.com/blog/threat-intelligence/2023/03/hunter-skimmer",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "193.201.9.116",
+            "description": "Server that hosted the Hunter skimmer domains. IP indicators go stale quickly; review before relying on it. Source: Malwarebytes, Hunter skimmer.",
+            "test_should_match": [
+                "<script src=\"https://193.201.9.116/s.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://193.201.9.11/s.js\"></script>"
             ]
         }
     ]
