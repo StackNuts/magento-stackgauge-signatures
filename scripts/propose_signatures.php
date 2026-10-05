@@ -483,6 +483,8 @@ function normalizeForMatch(string $text): string
 function longestRegexLiteral(string $pattern): string
 {
     $body = preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern;
+    // Character classes such as [a-zA-Z0-9] hold no literal text, so blank them out first.
+    $body = preg_replace('#\[[^\]]*\]#', ' ', $body) ?? $body;
     // Drop escape sequences such as \s or \. by replacing the backslash and the character after it.
     $body = preg_replace('/' . preg_quote(chr(92), '/') . './s', ' ', $body) ?? $body;
     $parts = preg_split('/[\[\]\(\)\|\*\+\?\{\}\^\$\.\s]+/', $body) ?: [];
@@ -519,6 +521,10 @@ function checkCandidateShape(array $candidate, string $sourceText): ?string
     $bare = $type === 'regex' ? (preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern) : $pattern;
     if (preg_match('/^[\p{L}\s|]+$/u', $bare) === 1) {
         return 'pattern is plain English prose, which would match articles about the attack rather than the attack itself';
+    }
+
+    if ($type === 'literal' && preg_match('/^[\w\-]+\.(?:php|phtml|phar)$/i', $pattern) === 1) {
+        return 'pattern is a bare file name, which matches any file that mentions it';
     }
 
     if ($type === 'regex' && preg_match('/\[[^\]]*\|[^\]]*\]/', $pattern) === 1) {

@@ -163,6 +163,9 @@ check($failures, count($groundedResult['accepted']) === 1, 'a pattern present in
 $proseResult = applyCandidates([['id' => 'prose-marker', 'name' => 'n', 'severity' => 'critical', 'target' => ['cms_content'], 'description' => 'd', 'pattern_type' => 'regex', 'pattern' => '/API authorization token|secret Magento cryptographic keys/', 'test_should_match' => ['API authorization token'], 'test_should_not_match' => ['harmless text']]], $existing, $cleanFiles, 10, normalizeForMatch('the API authorization token and secret Magento cryptographic keys'));
 check($failures, str_contains($proseResult['rejected']['prose-marker'][0] ?? '', 'plain English prose'), 'plain-English patterns should be rejected as prose');
 
+check($failures, str_contains(checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'health_check.php'], '') ?? '', 'bare file name'), 'a bare file name should be rejected');
+check($failures, longestRegexLiteral('/x[a-zA-Z0-9]+avatar/') === 'avatar', 'character classes should not count as literal text');
+check($failures, str_contains(checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'health_check.php'], '') ?? '', 'bare file name'), 'a bare file name should be rejected');
 check($failures, longestRegexLiteral('/eval\s*\(\s*base64_decode\s*\(/i') === 'base64_decode', 'longestRegexLiteral should return the longest literal run');
 check($failures, explainEmptyReply('') === 'the model returned an empty reply', 'explainEmptyReply should report an empty reply');
 check($failures, explainEmptyReply('no braces') === 'the reply contains no JSON object', 'explainEmptyReply should report a missing JSON object');
@@ -184,5 +187,5 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo 'All ' . 11 . " propose_signatures.php self-tests passed.\n";
+echo 'All ' . 12 . " propose_signatures.php self-tests passed.\n";
 exit(0);
