@@ -165,9 +165,11 @@ check($failures, str_contains($proseResult['rejected']['prose-marker'][0] ?? '',
 
 check($failures, str_contains(checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'health_check.php'], '') ?? '', 'bare file name'), 'a bare file name should be rejected');
 check($failures, checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'ZXZhbChiYXNlNjRfZGV'], '') === null, 'a single base64 token is not English prose and should be accepted');
+check($failures, str_contains(checkCandidateShape(['pattern_type' => 'regex', 'pattern' => '/image upload.*?malicious code/i'], '') ?? '', 'prose'), 'wildcard-joined English should be rejected as prose');
 check($failures, longestRegexLiteral('/x[a-zA-Z0-9]+avatar/') === 'avatar', 'character classes should not count as literal text');
 check($failures, str_contains(checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'health_check.php'], '') ?? '', 'bare file name'), 'a bare file name should be rejected');
 check($failures, checkCandidateShape(['pattern_type' => 'literal', 'pattern' => 'ZXZhbChiYXNlNjRfZGV'], '') === null, 'a single base64 token is not English prose and should be accepted');
+check($failures, str_contains(checkCandidateShape(['pattern_type' => 'regex', 'pattern' => '/image upload.*?malicious code/i'], '') ?? '', 'prose'), 'wildcard-joined English should be rejected as prose');
 check($failures, longestRegexLiteral('/eval\s*\(\s*base64_decode\s*\(/i') === 'base64_decode', 'longestRegexLiteral should return the longest literal run');
 check($failures, explainEmptyReply('') === 'the model returned an empty reply', 'explainEmptyReply should report an empty reply');
 check($failures, explainEmptyReply('no braces') === 'the reply contains no JSON object', 'explainEmptyReply should report a missing JSON object');
@@ -189,5 +191,5 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo 'All ' . 13 . " propose_signatures.php self-tests passed.\n";
+echo 'All ' . 14 . " propose_signatures.php self-tests passed.\n";
 exit(0);

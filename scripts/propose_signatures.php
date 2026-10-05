@@ -519,7 +519,9 @@ function checkCandidateShape(array $candidate, string $sourceText): ?string
     // Letters, spaces and alternation bars only means English prose, which matches any article
     // about the attack and not the attack itself. Real markers contain code or IOC punctuation.
     $bare = $type === 'regex' ? (preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern) : $pattern;
-    if (preg_match('/^[\p{L}\s|]+$/u', $bare) === 1 && str_contains(trim($bare), ' ')) {
+    // Wildcards and whitespace tokens join words without adding any code, so they are ignored here.
+    $words = preg_replace('/\.\*\??|\\\\s[*+]?/', ' ', $bare) ?? $bare;
+    if (preg_match('/^[\p{L}\s|]+$/u', $words) === 1 && str_contains(trim($words), ' ')) {
         return 'pattern is plain English prose, which would match articles about the attack rather than the attack itself';
     }
 
