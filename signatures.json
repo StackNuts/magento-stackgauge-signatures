@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.6",
+    "version": "2026-10-05",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -567,6 +567,27 @@
             "test_should_not_match": [
                 "<script src=\"https://193.201.9.11/s.js\"></script>"
             ]
+        },
+        {
+            "id": "polyshell-payload",
+            "name": "PolyShell Payload",
+            "severity": "critical",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/eval\\(base64_decode\\([^)]+\\)/i",
+            "description": "Detects potential PolyShell payload activity",
+            "test_should_match": [
+                "eval(base64_decode('ZXZhbChiYXNlNjRfZGV...'))",
+                "eval(base64_decode($code))"
+            ],
+            "test_should_not_match": [
+                "eval(",
+                "base64_decode("
+            ],
+            "source": "https://thehackernews.com/2026/03/magento-polyshell-flaw-enables.html"
         }
     ]
 }
