@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.4",
+    "version": "2026-10-05",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -415,6 +415,26 @@
             "test_should_not_match": [
                 "if (isset($_POST[\"email\"])) { exit; }"
             ]
+        },
+        {
+            "id": "health-check-php-backdoor",
+            "name": "Health Check PHP Backdoor",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "health_check.php",
+            "description": "Detects the health check PHP backdoor",
+            "test_should_match": [
+                "health_check.php",
+                "/health_check.php"
+            ],
+            "test_should_not_match": [
+                "health_check.html",
+                "/health_check.txt"
+            ],
+            "source": "https://sansec.io/research/magento-2-template-attacks"
         }
     ]
 }
