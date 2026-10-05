@@ -425,21 +425,48 @@ function extractCandidates(string $text): array
         return [];
     }
 
-    $parsed = json_decode($jsonMatch[0], true);
-    if ($parsed === null) {
-        // Models often write regex escapes such as \. straight into JSON, which is not a legal
-        // escape. Double any backslash that does not start a legal escape, then try again.
-        $backslash = chr(92);
-        $repaired = preg_replace_callback(
-            '/' . preg_quote($backslash, '/') . '(?![' . preg_quote($backslash, '/') . '"\/bfnrtu])/',
-            static fn (): string => $backslash . $backslash,
-            $jsonMatch[0]
-        );
-        $parsed = json_decode($repaired ?? '', true);
+    $parsed = decodeModelJson($jsonMatch[0]);
+    if ($parsed !== null) {
+        return is_array($parsed['signatures'] ?? null) ? $parsed['signatures'] : [];
     }
 
-    return is_array($parsed['signatures'] ?? null) ? $parsed['signatures'] : [];
+    // The whole reply did not parse, usually because one object is malformed. The model writes one
+    // signature per line, so keep every line that does parse rather than losing the lot.
+    $signatures = [];
+    preg_match_all('/\{"id".*\}/', $text, $lines);
+    foreach ($lines[0] as $line) {
+        $one = decodeModelJson(rtrim(trim($line), ','));
+        if ($one !== null && isset($one['id'])) {
+            $signatures[] = $one;
+        }
+    }
+
+    return $signatures;
 }
+
+/**
+ * Decodes JSON the model wrote. Models often put regex escapes such as \. straight into JSON, which
+ * is not a legal escape, so any backslash that does not start a legal escape is doubled before a
+ * second attempt. Returns null if it still will not parse.
+ */
+function decodeModelJson(string $json): ?array
+{
+    $decoded = json_decode($json, true);
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+
+    $backslash = chr(92);
+    $repaired = preg_replace_callback(
+        '/' . preg_quote($backslash, '/') . '(?![' . preg_quote($backslash, '/') . '"\/bfnrtu])/',
+        static fn (): string => $backslash . $backslash,
+        $json
+    );
+    $decoded = json_decode($repaired ?? '', true);
+
+    return is_array($decoded) ? $decoded : null;
+}
+
 
 /**
  * Lowercases and collapses whitespace, so grounding checks ignore line breaks and indentation.

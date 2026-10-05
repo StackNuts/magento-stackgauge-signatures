@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.3",
+    "version": "2026.10.4",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -394,6 +394,26 @@
             ],
             "test_should_not_match": [
                 "$digest = hash(\"sha256\", $file_contents);"
+            ]
+        },
+        {
+            "id": "xml-backdoor-post-parameter",
+            "name": "POST parameter used by the generated Interceptor backdoor",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php",
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "7faa27b473",
+            "description": "Request parameter name used by the persistent backdoor that a sed command injects into generated Magento Interceptor classes. Source: Sansec, Persistent Magento backdoor hidden in XML.",
+            "test_should_match": [
+                "if (isset($_POST[\"7faa27b473\"])) { exit; }"
+            ],
+            "test_should_not_match": [
+                "if (isset($_POST[\"email\"])) { exit; }"
             ]
         }
     ]

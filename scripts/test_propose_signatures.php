@@ -103,6 +103,14 @@ check($failures, count($result['accepted']) === 3, 'maxNew should cap how many c
 $escaped = extractCandidates('{"signatures":[{"id":"esc-test","name":"n","severity":"critical","target":["pub_php"],"pattern_type":"regex","pattern":"/a\.b\-c/","description":"d","test_should_match":["x"],"test_should_not_match":["y"]}]}');
 check($failures, count($escaped) === 1 && ($escaped[0]['pattern'] ?? '') === '/a\.b\-c/', 'extractCandidates should repair invalid JSON escapes such as \. and \-');
 
+// One malformed signature must not discard the valid ones on the other lines.
+$mixed = "{\"signatures\": [\n"
+    . "{\"id\": \"good-one\", \"name\": \"n\", \"pattern\": \"/a\\.b/\"},\n"
+    . "{\"id\": \"bad-one\", \"name\": \"n\", \"pattern\": \"/XOR \\\\\"[A-Z]+\\\\\"/\"},\n"
+    . "{\"id\": \"good-two\", \"name\": \"n\", \"pattern\": \"plain\"}\n]}";
+$recovered = array_column(extractCandidates($mixed), 'id');
+check($failures, $recovered === ['good-one', 'good-two'], 'valid lines should survive a malformed sibling; got ' . implode(',', $recovered));
+
 // 5a. Processed-source state: each source is read once; rejections persist until the rules change.
 $stateSources = [
     'https://already-read.example' => ['url' => 'https://already-read.example', 'title' => 't', 'content' => 'c'],
@@ -176,5 +184,5 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo 'All ' . 10 . " propose_signatures.php self-tests passed.\n";
+echo 'All ' . 11 . " propose_signatures.php self-tests passed.\n";
 exit(0);
