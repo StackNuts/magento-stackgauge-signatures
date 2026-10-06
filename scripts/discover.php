@@ -218,6 +218,16 @@ function extractIndicators(string $html): array
 }
 
 /**
+ * True when an article is about Magento or Adobe Commerce. Generic skimmer or malware write-ups
+ * that only mention Magento in passing are skipped, so the candidates stay Magento-specific.
+ */
+function isMagentoArticle(string $html): bool
+{
+    $text = strtolower(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+    return str_contains($text, 'magento') || str_contains($text, 'adobe commerce');
+}
+/**
  * Reads the state file. A missing file starts an empty state.
  *
  * @return array{last_run: string, sources: array<string, array<string, string>>}
@@ -301,6 +311,11 @@ function main(): int
         $html = httpGet($article['url']);
         if ($html === null) {
             echo "Blocked, left unread: {$article['url']}\n";
+            continue;
+        }
+        if (!isMagentoArticle($html)) {
+            $state['sources'][$article['url']] = ['first_seen' => $today, 'outcome' => 'skipped: not about Magento'];
+            echo "Skipped, not about Magento: {$article['url']}\n";
             continue;
         }
         $indicators = extractIndicators($html);

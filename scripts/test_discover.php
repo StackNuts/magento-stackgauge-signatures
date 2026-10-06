@@ -57,6 +57,9 @@ $base64 = array_values(array_filter($indicators, fn ($i) => $i['kind'] === 'base
 $check(count($base64) === 1 && str_contains($base64[0]['context'], 'decodes to'), 'extraction should show what a base64 blob decodes to');
 $check(!in_array('sansec.io', $texts, true), 'publisher domains should be ignored');
 
+$check(isMagentoArticle('<p>Magento stores hit by a skimmer.</p>'), 'an article about Magento should pass the gate');
+$check(!isMagentoArticle('<p>A WordPress plugin was hijacked.</p>'), 'an article about another platform should be skipped');
+
 // State: a round trip keeps the last run and the sources.
 $tmp = sys_get_temp_dir() . '/discover-state-test-' . getmypid() . '.json';
 saveState($tmp, ['last_run' => '2026-10-05', 'sources' => ['https://sansec.io/research/x' => ['outcome' => 'read']]]);

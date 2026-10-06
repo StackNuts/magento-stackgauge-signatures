@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.11",
+    "version": "2026.10.12",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -245,25 +245,6 @@
             ],
             "test_should_not_match": [
                 "<script>navigator.sendBeacon('/analytics/collect', 'x');</script>"
-            ]
-        },
-        {
-            "id": "magecart-btoa-json-card-encode",
-            "name": "Base64-encoded JSON of form data (skimmer encoding pattern)",
-            "severity": "warning",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/btoa\\s*\\(\\s*unescape\\s*\\(\\s*encodeURIComponent\\s*\\(\\s*JSON\\.stringify\\s*\\(/",
-            "description": "Encoding chain seen in Magecart skimmers that Base64-encode a JSON object of card fields before exfiltration. Heuristic: warns for review rather than blocking. Source: https://blog.cyble.com/2022/09/01/highly-evasive-magecart-javascript-skimmer-active-in-the-wild/",
-            "source": "https://blog.cyble.com/2022/09/01/highly-evasive-magecart-javascript-skimmer-active-in-the-wild/",
-            "test_should_match": [
-                "var d = btoa(unescape(encodeURIComponent(JSON.stringify(fields))));"
-            ],
-            "test_should_not_match": [
-                "var d = JSON.stringify(fields);"
             ]
         },
         {
@@ -780,25 +761,6 @@
             ]
         },
         {
-            "id": "cryptojacking-siteverification-domain",
-            "name": "Cryptojacking host found on 2,496 stores",
-            "severity": "critical",
-            "source": "https://sansec.io/research/cryptojacking-found-on-2496-stores",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:siteverification\\.online)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Cryptojacking host found on 2,496 stores.",
-            "test_should_match": [
-                "<script src=\"https://siteverification.online/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
             "id": "helpdesk-phishing-domain",
             "name": "Helpdesk domain used to breach Magento",
             "severity": "critical",
@@ -970,44 +932,6 @@
             ]
         },
         {
-            "id": "abs-cbn-coffemokko-domain",
-            "name": "Skimmer host from the ABS-CBN store compromise",
-            "severity": "critical",
-            "source": "https://sansec.io/research/abs-cbn.com-hacked",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:coffemokko\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Skimmer host from the ABS-CBN store compromise.",
-            "test_should_match": [
-                "<script src=\"https://coffemokko.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "american-cancer-thatispersonal-domain",
-            "name": "Skimmer host from the American Cancer Society incident",
-            "severity": "critical",
-            "source": "https://sansec.io/research/american-cancer-society-magecart",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:thatispersonal\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Skimmer host from the American Cancer Society incident.",
-            "test_should_match": [
-                "<script src=\"https://thatispersonal.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
             "id": "cardbleed-domains",
             "name": "Domains from the CardBleed Magento compromise",
             "severity": "critical",
@@ -1040,44 +964,6 @@
             "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike service domains from the Google-services skimming campaigns.",
             "test_should_match": [
                 "<script src=\"https://udalzira.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "polyfill-supply-chain-domains",
-            "name": "Malicious domains from the polyfill.io supply-chain attack",
-            "severity": "critical",
-            "source": "https://sansec.io/research/polyfill-supply-chain-attack",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:unionadjs\\.com|xhsbpza\\.com|newcrbpc\\.com|kuurza\\.com|dxtv1\\.com|ys752\\.com|shuanshu\\.com\\.com|googie\\-anaiytics\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Malicious domains from the polyfill.io supply-chain attack.",
-            "test_should_match": [
-                "<script src=\"https://unionadjs.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "polyfill-io-script-host",
-            "name": "Script host of the compromised polyfill.io service",
-            "severity": "warning",
-            "source": "https://sansec.io/research/polyfill-supply-chain-attack",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:cdn\\.polyfill\\.io)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Script host of the compromised polyfill.io service.",
-            "test_should_match": [
-                "<script src=\"https://cdn.polyfill.io/x.js\"></script>"
             ],
             "test_should_not_match": [
                 "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
@@ -1119,46 +1005,6 @@
             ],
             "test_should_not_match": [
                 "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "ecommerce-malware-attacker-ips",
-            "name": "Attacker IPs from the Linux AVP ecommerce malware",
-            "severity": "warning",
-            "source": "https://sansec.io/research/ecommerce-malware-linux-avp",
-            "target": [
-                "cms_content",
-                "design_config",
-                "pub_php"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:47\\.113\\.202\\.35|103\\.233\\.11\\.28)\\b/",
-            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IPs from the Linux AVP ecommerce malware.",
-            "test_should_match": [
-                "fetch('http://47.113.202.35/c2')"
-            ],
-            "test_should_not_match": [
-                "fetch('http://10.0.0.1/c2')"
-            ]
-        },
-        {
-            "id": "cronrat-nginrat-attacker-ip",
-            "name": "Attacker IP from the cronRAT and nginRAT write-ups",
-            "severity": "warning",
-            "source": "https://sansec.io/research/cronrat",
-            "target": [
-                "cms_content",
-                "design_config",
-                "pub_php"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:47\\.115\\.46\\.167)\\b/",
-            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IP from the cronRAT and nginRAT write-ups.",
-            "test_should_match": [
-                "fetch('http://47.115.46.167/c2')"
-            ],
-            "test_should_not_match": [
-                "fetch('http://10.0.0.1/c2')"
             ]
         },
         {
@@ -1220,44 +1066,6 @@
             ]
         },
         {
-            "id": "keylogger-bank-employees-domains",
-            "name": "Lookalike script domains from the keylogger campaign",
-            "severity": "critical",
-            "source": "https://sansec.io/research/keylogger-major-us-bank-employees",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:js\\-csp\\.com|artrabol\\.com|js\\-tag\\.com|jslibrary\\.net|2025js\\-csp\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike script domains from the keylogger campaign.",
-            "test_should_match": [
-                "<script src=\"https://js-csp.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "prestashop-stylemercedes-domains",
-            "name": "Domains from the PrestaShop skimming compromise",
-            "severity": "critical",
-            "source": "https://sansec.io/research/global-retailer-prestashop-hacked",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:stylemercedes\\.top|publishediocsstylemercedes\\.top)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the PrestaShop skimming compromise.",
-            "test_should_match": [
-                "<script src=\"https://stylemercedes.top/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
             "id": "polyshell-mass-attack-domain",
             "name": "Host from the PolyShell mass attack wave",
             "severity": "critical",
@@ -1271,63 +1079,6 @@
             "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Host from the PolyShell mass attack wave.",
             "test_should_match": [
                 "<script src=\"https://lanhd6549tdhse.top/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "clickfix-clipboard-domains",
-            "name": "Domains from the ClickFix clipboard hijacker",
-            "severity": "critical",
-            "source": "https://sansec.io/research/clickfix-clipboard-hijacker",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:windlrr\\.com|stromao\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the ClickFix clipboard hijacker.",
-            "test_should_match": [
-                "<script src=\"https://windlrr.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "funnelkit-analytics-domain",
-            "name": "Malicious script host from the FunnelKit exploitation",
-            "severity": "critical",
-            "source": "https://sansec.io/research/funnelkit-woocommerce-vulnerability-exploited",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:analytics\\-reports\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Malicious script host from the FunnelKit exploitation.",
-            "test_should_match": [
-                "<script src=\"https://analytics-reports.com/x.js\"></script>"
-            ],
-            "test_should_not_match": [
-                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
-            ]
-        },
-        {
-            "id": "optinmonster-lookalike-domains",
-            "name": "Lookalike OptinMonster script hosts from the supply-chain attack",
-            "severity": "critical",
-            "source": "https://sansec.io/research/optinmonster-supply-chain-attack",
-            "target": [
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:api\\.min\\.jsoptinmonstera\\.opmnstr\\.com|api\\.min\\.jsoptinmonstera\\.optnmstr\\.com|api\\.min\\.jsoptinmonstera\\.trstplse\\.com)\\b/i",
-            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike OptinMonster script hosts from the supply-chain attack.",
-            "test_should_match": [
-                "<script src=\"https://api.min.jsoptinmonstera.opmnstr.com/x.js\"></script>"
             ],
             "test_should_not_match": [
                 "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
@@ -1348,26 +1099,6 @@
             "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IPs from the SessionReaper campaign.",
             "test_should_match": [
                 "fetch('http://23.146.184.93/c2')"
-            ],
-            "test_should_not_match": [
-                "fetch('http://10.0.0.1/c2')"
-            ]
-        },
-        {
-            "id": "webrtc-skimmer-ip",
-            "name": "Address named in the WebRTC skimmer write-up",
-            "severity": "warning",
-            "source": "https://sansec.io/research/webrtc-skimmer",
-            "target": [
-                "cms_content",
-                "design_config",
-                "pub_php"
-            ],
-            "pattern_type": "regex",
-            "pattern": "/\\b(?:202\\.181\\.177\\.177)\\b/",
-            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Address named in the WebRTC skimmer write-up.",
-            "test_should_match": [
-                "fetch('http://202.181.177.177/c2')"
             ],
             "test_should_not_match": [
                 "fetch('http://10.0.0.1/c2')"
