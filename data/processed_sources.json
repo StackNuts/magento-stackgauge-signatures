@@ -24,11 +24,6 @@
             "last_read": "2026-10-06",
             "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
         },
-        "https://sansec.io/research/magento-2-template-attacks": {
-            "first_seen": "2026-10-05",
-            "last_read": "2026-10-06",
-            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
-        },
         "https://sansec.io/research/naturalfreshmall-mass-hack": {
             "first_seen": "2026-10-05",
             "last_read": "2026-10-06",
