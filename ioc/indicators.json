@@ -765,6 +765,28 @@
             ],
             "ioc": true,
             "expires_on": "2027-04-04"
+        },
+        {
+            "id": "template-attack-rat-c2-domains",
+            "name": "Template attack RAT C2 domains",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "cms_content",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:dev-clientservice\\.com|mailchimp-addons\\.com|allsecurehosting\\.com|theroots\\.in)\\b/i",
+            "description": "Domains for the 223sam.jpg RAT download host and command servers in Magento 2 template attacks. Domain indicators go stale; review before relying on them.",
+            "test_should_match": [
+                "curl https://theroots.in/pub/media/avatar/223sam.jpg",
+                "commands.dev-clientservice.com"
+            ],
+            "test_should_not_match": [
+                "https://mailchimp.com/signup"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
         }
     ]
 }
