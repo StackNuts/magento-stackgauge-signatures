@@ -22,7 +22,7 @@ const SANSEC_RESEARCH_PREFIX = 'https://sansec.io/research/';
 const FEEDS = [
     'https://blog.sucuri.net/feed' => true,
     'https://www.malwarebytes.com/blog/feed' => true,
-    'https://thehackernews.com/feeds/posts/default' => true,
+    'https://feeds.feedburner.com/TheHackersNews' => true,
 ];
 
 const MAGENTO_TERMS = ['magento', 'adobe commerce', 'magecart', 'skimmer', 'webshell', 'e-commerce', 'ecommerce'];
