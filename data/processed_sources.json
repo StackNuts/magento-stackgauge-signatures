@@ -1,5 +1,5 @@
 {
-    "rules_version": "2026-10-05.1",
+    "last_run": "2026-10-06",
     "sources": {
         "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html": {
             "first_seen": "2026-10-05",
@@ -716,61 +716,10 @@
             "first_seen": "2026-10-06",
             "last_read": "2026-10-06",
             "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-2-template-attacks": {
+            "first_seen": "2026-10-06",
+            "outcome": "read: 26 indicator(s)"
         }
-    },
-    "rejected": {
-        "stripe-skimmer-loader": {
-            "reason": "stripe-skimmer-loader: test_should_match[0] did not match its own pattern",
-            "date": "2026-10-05"
-        },
-        "polyshell-upload-directory": {
-            "reason": "pattern is a file path, not content a scanner can match inside a file",
-            "date": "2026-10-05"
-        },
-        "template-attack-curl": {
-            "reason": "pattern text \"a-za-z0-9\" does not appear in any source the model was given",
-            "date": "2026-10-05"
-        },
-        "stylesmuggler-marker": {
-            "reason": "pattern text \"a-za-z0-9\" does not appear in any source the model was given",
-            "date": "2026-10-05"
-        },
-        "stylesmuggler-php-template-injection": {
-            "reason": "stylesmuggler-php-template-injection: test_should_match[1] did not match its own pattern",
-            "date": "2026-10-05"
-        },
-        "magecart-webrtc-exfiltration": {
-            "reason": "magecart-webrtc-exfiltration: test_should_match[1] did not match its own pattern",
-            "date": "2026-10-05"
-        },
-        "cosmicsting-magento-api-authorization": {
-            "reason": "cosmicsting-magento-api-authorization: test_should_match[1] did not match its own pattern",
-            "date": "2026-10-05"
-        },
-        "polyshell-image-upload": {
-            "reason": "polyshell-image-upload: test_should_match[1] did not match its own pattern",
-            "date": "2026-10-05"
-        },
-        "magecart-404-page-skimmer": {
-            "reason": "magecart-404-page-skimmer: test_should_match[1] did not match its own pattern; magecart-404-page-skimmer: test_should_not_match[0] incorrectly matched",
-            "date": "2026-10-05"
-        },
-        "cosmicsting-xxe-exploit": {
-            "reason": "pattern has too little literal text to verify against the sources",
-            "date": "2026-10-05"
-        },
-        "stylesmuggler-backdoor": {
-            "reason": "pattern is plain English prose, which would match articles about the attack rather than the attack itself",
-            "date": "2026-10-05"
-        },
-        "magecart-gtm-exploit": {
-            "reason": "pattern has too little literal text to verify against the sources",
-            "date": "2026-10-05"
-        },
-        "license-backdoor": {
-            "reason": "pattern text \"include_once('license.php')\" does not appear in any source the model was given",
-            "date": "2026-10-05"
-        }
-    },
-    "last_run": "2026-04-13"
+    }
 }
