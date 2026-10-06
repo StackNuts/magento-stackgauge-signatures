@@ -66,11 +66,11 @@ Do not put IP addresses in core rules. Do not put a bare domain list in core rul
    php scripts/test_discover.php
    php scripts/validate_signatures.php
    ```
-   Core rules go to `signatures.json`, and IOC rules go to `ioc/indicators.json` with an expiry date.
+   Core rules go to `signatures.json`, and IOC rules go to `ioc/indicators.json` with an expiry date. `--apply` also rewrites `signatures.json.sha256`; the module refuses any feed whose checksum does not match.
 7. **Propose a pull request** from a branch named `rules/<slug>`:
    ```
    git checkout -b rules/<slug>
-   git add signatures.json ioc/indicators.json
+   git add signatures.json signatures.json.sha256 ioc/indicators.json
    git commit -m "Add <n> signatures from <source name>"
    git push -u origin rules/<slug>
    gh pr create --base main --title "Signatures from <source name>" --body "<list of signatures, each with its source and what it detects>"
