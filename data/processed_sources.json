@@ -83,7 +83,8 @@
         },
         "https://sansec.io/research/magento-2-persistent-parasite": {
             "first_seen": "2026-10-05",
-            "outcome": "seeded: reviewed offline (excerpts examined)"
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 4 rules on rules/code-pass-1"
         },
         "https://blog.sucuri.net/2024/04/magento-shoplift-ecommerce-malware-targets-both-wordpress-magento-cms.html": {
             "first_seen": "2026-10-05",
@@ -295,7 +296,8 @@
         },
         "https://sansec.io/research/magento-breach-analysis": {
             "first_seen": "2026-10-05",
-            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 1 rule on rules/code-pass-1"
         },
         "https://sansec.io/research/fake-magento-patch-9789-is-virus": {
             "first_seen": "2026-10-05",
@@ -535,7 +537,8 @@
         },
         "https://sansec.io/research/sessionreaper": {
             "first_seen": "2026-10-05",
-            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 5 rules on rules/code-pass-1"
         },
         "https://sansec.io/research/sessionreaper-exploitation": {
             "first_seen": "2026-10-05",
@@ -563,7 +566,8 @@
         },
         "https://sansec.io/research/fake-magento-repos-github-malware": {
             "first_seen": "2026-10-05",
-            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+            "last_read": "2026-10-06",
+            "outcome": "code pass: reviewed, GitHub downloads, no store-side rules"
         },
         "https://sansec.io/research/yargo": {
             "first_seen": "2026-10-05",
@@ -619,7 +623,8 @@
         },
         "https://sansec.io/research/amasty-mass-disclosure": {
             "first_seen": "2026-10-05",
-            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+            "last_read": "2026-10-06",
+            "outcome": "code pass: reviewed, module names only, no rules"
         },
         "https://sansec.io/research/adobe-commerce-account-takeover-apsb26-92": {
             "first_seen": "2026-10-05",
