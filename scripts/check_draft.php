@@ -16,6 +16,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/lib/matching.php';
+require __DIR__ . '/lib/checksum.php';
 
 const ROOT = __DIR__ . '/..';
 
@@ -223,7 +224,8 @@ if ($apply && $coreAccepted !== []) {
     $current['signatures'] = [...$current['signatures'], ...$accepted];
     $current['version'] = date('Y.m.d');
     file_put_contents(ROOT . '/signatures.json', json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-    echo "Added to signatures.json (version {$current['version']}).\n";
+    writeChecksum(ROOT . '/signatures.json');
+    echo "Added to signatures.json (version {$current['version']}) and refreshed " . CHECKSUM_FILE_NAME . ".\n";
 } elseif (!$apply) {
     echo "Not applied. Re-run with --apply to add the accepted signatures.\n";
 }
