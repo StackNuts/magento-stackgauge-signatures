@@ -1,0 +1,12 @@
+/.DS_Store
+Thumbs.db
+
+/.env
+
+
+
+# Processed-source state. Lives on the state branch in CI; local runs write it here.
+/data/processed_sources.json
+
+# Checked-out state branch in CI.
+/state/
