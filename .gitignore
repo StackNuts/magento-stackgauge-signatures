@@ -5,8 +5,8 @@ Thumbs.db
 
 
 
-# Processed-source state. Lives on the state branch in CI; local runs write it here.
-/data/processed_sources.json
 
-# Checked-out state branch in CI.
-/state/
+
+# Drafting workspace for the magento-rule-author skill. Only accepted signatures reach the repo.
+/data/drafts/
+/data/sources/
