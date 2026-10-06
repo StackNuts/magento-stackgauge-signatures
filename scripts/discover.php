@@ -47,12 +47,7 @@ const IGNORED_DOMAINS = [
 const FIRST_RUN_LOOKBACK_DAYS = 30;
 const OVERLAP_DAYS = 2;
 const MAX_ARTICLES_PER_RUN = 10;
-const DRAFT_MODEL = '@cf/openai/gpt-oss-120b';
-const DRAFT_MAX_TOKENS = 6000;
-const NEURON_BUDGET = 6000;
-const NEURONS_PER_DRAFT_ESTIMATE = 600;
 const ARTICLE_CHARS = 20000;
-const MENU_SIZE = 40;
 const PAGE_CHARS = 20000;
 const CONTEXT_CHARS = 160;
 
@@ -342,7 +337,7 @@ function gatherArticles(string $since, array $state): array
     return $articles;
 }
 
-/** Plain article text for the drafting model: code blocks first, then the article body. */
+/** Readable article text: code blocks first, then the article body. Used by fetch_article.php. */
 function articleText(string $html): string
 {
     $html = mb_scrub($html, 'UTF-8');
@@ -361,222 +356,6 @@ function articleText(string $html): string
 
     return mb_substr($combined, 0, ARTICLE_CHARS);
 }
-
-/**
- * The numbered menu the drafting model may choose from: domains, base64 blobs, file names, IPs and
- * calls first, then short code. Capped at MENU_SIZE so the prompt stays small.
- *
- * @return list<array{kind: string, text: string}>
- */
-function menuFrom(array $indicators): array
-{
-    $order = ['domain' => 0, 'base64' => 1, 'file' => 2, 'ip' => 3, 'call' => 4, 'code' => 5];
-    $usable = array_values(array_filter(
-        $indicators,
-        static fn (array $i): bool => isset($order[$i['kind']]) && ($i['kind'] !== 'code' || mb_strlen($i['text']) <= 200)
-    ));
-    usort($usable, static fn (array $a, array $b): int => $order[$a['kind']] <=> $order[$b['kind']]);
-
-    $menu = [];
-    foreach (array_slice($usable, 0, MENU_SIZE) as $i) {
-        $menu[] = ['kind' => $i['kind'], 'text' => mb_substr(str_replace("\n", ' ', $i['text']), 0, 160)];
-    }
-
-    return $menu;
-}
-
-/**
- * One call to the drafting model. Returns the reply text, the neurons used and any error.
- *
- * @return array{ok: bool, text: string, neurons: float, error: string}
- */
-function callDraftModel(string $accountId, string $apiToken, string $system, string $user): array
-{
-    $body = json_encode([
-        'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $user]],
-        'max_tokens' => DRAFT_MAX_TOKENS,
-        'temperature' => 0,
-    ]);
-    $ch = curl_init("https://api.cloudflare.com/client/v4/accounts/{$accountId}/ai/run/" . DRAFT_MODEL);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json', "Authorization: Bearer {$apiToken}"],
-        CURLOPT_POSTFIELDS => $body,
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 240,
-    ]);
-    $raw = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    $response = is_string($raw) ? json_decode($raw, true) : null;
-    if ($raw === false || $httpCode >= 400 || !is_array($response['result'] ?? null)) {
-        return ['ok' => false, 'text' => '', 'neurons' => 0.0, 'error' => 'HTTP ' . $httpCode . ': ' . substr((string)$raw, 0, 200)];
-    }
-    $result = $response['result'];
-
-    return [
-        'ok' => true,
-        'text' => (string)($result['choices'][0]['message']['content'] ?? ''),
-        'neurons' => (float)($result['usage']['neurons'] ?? 0),
-        'error' => '',
-    ];
-}
-
-/** A short, filesystem-safe id from a group name. */
-function slugify(string $text): string
-{
-    $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($text)) ?? '', '-');
-
-    return $slug === '' ? 'indicator-group' : $slug;
-}
-
-/**
- * Builds one signature from a group of menu items. The code writes the pattern and the samples, so
- * the model never writes a string. Returns null, with the reason, when the group cannot be built
- * safely: mixed kinds, file names, or base64 items without a shared prefix.
- *
- * @param list<array{kind: string, text: string}> $items
- * @return array{signature: array<string, mixed>|null, reason: string}
- */
-function signatureFromGroup(string $name, string $severity, array $items, string $url, string $why): array
-{
-    $kinds = array_values(array_unique(array_column($items, 'kind')));
-    if (count($kinds) !== 1) {
-        return ['signature' => null, 'reason' => 'items mix kinds (' . implode(', ', $kinds) . '); split the group'];
-    }
-    $kind = $kinds[0];
-    $texts = array_column($items, 'text');
-    $single = count($texts) === 1;
-    $target = $kind === 'path' ? ['pub_php'] : ['cms_content', 'design_config'];
-    $notMatch = ['<script src="https://cdn.example-shop.com/app.js"></script>', 'See the example.org documentation.'];
-
-    switch ($kind) {
-        case 'domain':
-        case 'ip':
-        case 'gtm':
-        case 'marker':
-            $sample = match ($kind) {
-                'domain' => '<script src="https://' . $texts[0] . '/x.js"></script>',
-                'ip' => "fetch('http://" . $texts[0] . "/c2')",
-                'gtm' => "<script>gtag('config', '" . $texts[0] . "');</script>",
-                default => 'var m = "' . $texts[0] . '";',
-            };
-            $pattern = $single ? $texts[0] : '/\b(?:' . implode('|', array_map(fn ($t) => preg_quote($t, '/'), $texts)) . ')\b/i';
-            $type = $single ? 'literal' : 'regex';
-            break;
-
-        case 'base64':
-            $prefix = $texts[0];
-            foreach ($texts as $t) {
-                $n = 0;
-                while ($n < min(strlen($prefix), strlen($t)) && $prefix[$n] === $t[$n]) {
-                    $n++;
-                }
-                $prefix = substr($prefix, 0, $n);
-            }
-            if (strlen($prefix) < 12) {
-                return ['signature' => null, 'reason' => 'base64 items share no prefix of 12 characters'];
-            }
-            $pattern = $prefix;
-            $type = 'literal';
-            $sample = 'var d = "' . $prefix . '";';
-            break;
-
-        case 'path':
-        case 'call':
-        case 'code':
-            if (!$single || mb_strlen($texts[0]) > 200) {
-                return ['signature' => null, 'reason' => 'only a single short ' . $kind . ' item can become a signature'];
-            }
-            $pattern = $texts[0];
-            $type = 'literal';
-            $sample = $kind === 'path' ? 'ls ' . $texts[0] : '<p>' . $texts[0] . '</p>';
-            break;
-
-        default:
-            return ['signature' => null, 'reason' => "kind {$kind} cannot become a signature"];
-    }
-
-    return ['signature' => [
-        'id' => slugify($name) . '-' . $kind,
-        'name' => $name,
-        'severity' => $severity,
-        'source' => $url,
-        'target' => $target,
-        'pattern_type' => $type,
-        'pattern' => $pattern,
-        'description' => trim($why) . ' Source: ' . $url . '.',
-        'test_should_match' => [$sample],
-        'test_should_not_match' => $notMatch,
-    ], 'reason' => ''];
-}
-
-/**
- * Drafts signatures for one article. The model only chooses menu numbers and names a group; the code
- * builds each signature, and the validator checks it against the clean corpus.
- *
- * @param list<array{kind: string, text: string}> $menu
- * @return array{drafts: list<array{signature: array<string, mixed>|null, errors: list<string>, reason: string}>, neurons: float, error: string, reply: string}
- */
-function draftSignatures(string $url, string $html, array $menu, string $accountId, string $apiToken): array
-{
-    $system = 'You select indicators for Magento detection from ONE article. Reply with ONLY JSON: '
-        . '{"groups":[{"name":"short name","severity":"critical|warning","items":[menu numbers],"why":"one sentence"}]}. '
-        . 'Rules: 1. Use ONLY menu numbers from the menu. 2. Put items that belong to one campaign and one kind in one group. '
-        . '3. Skip publisher, vendor, CVE and legitimate-service references. 4. Magento-related indicators only. '
-        . 'If none qualify, return {"groups":[]}.';
-
-    $lines = [];
-    foreach ($menu as $n => $i) {
-        $lines[] = ($n + 1) . ". [{$i['kind']}] {$i['text']}";
-    }
-    $user = "Article ({$url}):\n" . articleText($html) . "\n\nMenu:\n" . implode("\n", $lines);
-
-    $reply = callDraftModel($accountId, $apiToken, $system, $user);
-    if (!$reply['ok']) {
-        return ['drafts' => [], 'neurons' => $reply['neurons'], 'error' => $reply['error'], 'reply' => ''];
-    }
-
-    $parsed = preg_match('/\{.*\}/s', $reply['text'], $json) ? json_decode($json[0], true) : null;
-    $groups = is_array($parsed['groups'] ?? null) ? $parsed['groups'] : [];
-    $clean = listFilesRecursively(dirname(__DIR__) . '/corpus/clean');
-
-    $drafts = [];
-    foreach ($groups as $group) {
-        if (!is_array($group)) {
-            continue;
-        }
-        $items = [];
-        foreach (array_unique(array_filter((array)($group['items'] ?? []), 'is_int')) as $n) {
-            if ($n >= 1 && $n <= count($menu)) {
-                $items[] = $menu[$n - 1];
-            }
-        }
-        if ($items === []) {
-            continue;
-        }
-        $name = (string)($group['name'] ?? 'indicator group');
-        $severity = in_array($group['severity'] ?? '', ['critical', 'warning'], true) ? $group['severity'] : 'warning';
-        // One signature per kind: a group that mixes kinds is split, since each kind needs its own pattern.
-        $byKind = [];
-        foreach ($items as $item) {
-            $byKind[$item['kind']][] = $item;
-        }
-        foreach ($byKind as $kind => $kindItems) {
-            $built = signatureFromGroup($name . ' (' . $kind . ')', $severity, $kindItems, $url, (string)($group['why'] ?? ''));
-            if ($built['signature'] === null) {
-                $drafts[] = ['signature' => null, 'errors' => ['not built: ' . $built['reason']], 'reason' => $name];
-                continue;
-            }
-            $drafts[] = ['signature' => $built['signature'], 'errors' => validateSignatureSet([$built['signature']], $clean), 'reason' => $name];
-        }
-    }
-
-    return ['drafts' => $drafts, 'neurons' => $reply['neurons'], 'error' => $parsed === null ? 'reply was not JSON' : '', 'reply' => $reply['text']];
-}
-
 /**
  * @return int Process exit code.
  */
@@ -594,9 +373,6 @@ function main(): int
     $articles = array_slice(gatherArticles($since, $state), 0, MAX_ARTICLES_PER_RUN);
     echo "Since {$since}: " . count($articles) . " new article(s) to read.\n";
 
-    $accountId = getenv('CLOUDFLARE_ACCOUNT_ID') ?: '';
-    $apiToken = getenv('CLOUDFLARE_API_KEY') ?: '';
-    $neuronsSpent = 0.0;
     $results = [];
     foreach ($articles as $article) {
         $html = httpGet($article['url']);
@@ -610,23 +386,10 @@ function main(): int
             continue;
         }
         $indicators = extractIndicators($html);
-        $entry = $article + ['indicators' => $indicators, 'drafts' => []];
+        $entry = $article + ['indicators' => $indicators];
         $state['sources'][$article['url']] = ['first_seen' => $today, 'outcome' => 'read: ' . count($indicators) . ' indicator(s)'];
         echo count($indicators) . " indicator(s): {$article['url']}\n";
 
-        if ($accountId !== '' && $apiToken !== '') {
-            if ($neuronsSpent + NEURONS_PER_DRAFT_ESTIMATE > NEURON_BUDGET) {
-                echo "Neuron budget reached; not drafting: {$article['url']}\n";
-            } else {
-                $draft = draftSignatures($article['url'], $html, menuFrom($indicators), $accountId, $apiToken);
-                $neuronsSpent += $draft['neurons'];
-                $entry['drafts'] = $draft['drafts'];
-                $entry['draft_error'] = $draft['error'];
-                $entry['draft_reply'] = $draft['reply'] ?? '';
-                $valid = count(array_filter($draft['drafts'], fn (array $d): bool => $d['errors'] === []));
-                echo "Drafted " . count($draft['drafts']) . " ({$valid} valid), " . round($draft['neurons']) . " neurons: {$article['url']}\n";
-            }
-        }
         $results[] = $entry;
     }
 
@@ -640,7 +403,6 @@ function main(): int
         );
     }
 
-    echo 'Neurons used by drafting this run: ' . round($neuronsSpent) . "\n";
     $state['last_run'] = $today;
     saveState($statePath, $state);
 
