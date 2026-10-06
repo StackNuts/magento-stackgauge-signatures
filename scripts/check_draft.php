@@ -79,6 +79,50 @@ function coreTokens(array $sig): array
 }
 
 /**
+ * The plain text a rule matches, split at wildcards and with escapes removed. A rule written as a
+ * regex and a rule written as a literal can match the same text, so comparing these fragments
+ * catches what the token test misses.
+ *
+ * @return list<string>
+ */
+function plainFragments(array $sig): array
+{
+    $pattern = (string)($sig['pattern'] ?? '');
+    if (($sig['pattern_type'] ?? '') !== 'regex') {
+        return [trim($pattern)];
+    }
+    $body = preg_replace('#^/(.*)/[a-z]*$#s', '$1', $pattern) ?? $pattern;
+    // Escaped brackets are text, not character classes, so protect them before splitting.
+    $body = str_replace(['\\[', '\\]'], ["\x01", "\x02"], $body);
+    $parts = preg_split('/\.\{\d*,?\d*\}|\.[*+?]\??|\\\\[sS][*+]\??|\[[^\]]*\][*+?]?/', $body) ?: [];
+    $fragments = [];
+    foreach ($parts as $part) {
+        $plain = trim(str_replace(["\x01", "\x02"], ['[', ']'], (string)preg_replace('/\\\\([^A-Za-z0-9])/', '$1', $part)));
+        if (mb_strlen($plain) >= 20) {
+            $fragments[] = $plain;
+        }
+    }
+
+    return $fragments;
+}
+
+/** True when one rule's matched text contains a fragment of the other's. */
+function fragmentOverlap(array $sig, array $other): bool
+{
+    $mine = plainFragments($sig);
+    $theirs = plainFragments($other);
+    foreach ($mine as $f) {
+        foreach ($theirs as $g) {
+            if (str_contains($g, $f) || str_contains($f, $g)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
  * The existing signature whose core literal overlaps one of this signature's, or null.
  *
  * @param list<array<string, mixed>> $existing
@@ -87,6 +131,9 @@ function conceptOverlap(array $sig, array $existing): ?string
 {
     $mine = coreTokens($sig);
     foreach ($existing as $other) {
+        if (fragmentOverlap($sig, $other)) {
+            return "{$other['id']} (matched text overlaps)";
+        }
         foreach (coreTokens($other) as $theirs) {
             foreach ($mine as $token) {
                 if (str_contains($theirs, $token) || str_contains($token, $theirs)) {
