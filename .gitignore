@@ -1,0 +1,10 @@
+# macOS and Windows noise
+/.DS_Store
+Thumbs.db
+
+# Local secrets. Keep ignored so a key can never be committed by accident.
+/.env
+
+# Drafting workspace for the magento-rule-author skill. Only accepted signatures reach the repo.
+/data/drafts/
+/data/sources/
