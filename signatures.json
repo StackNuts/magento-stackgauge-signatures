@@ -1604,26 +1604,6 @@
             ]
         },
         {
-            "id": "svg-skimmer-mgx-cv-flag",
-            "name": "Skimmer localStorage _mgx_cv run-once flag",
-            "severity": "warning",
-            "source": "https://sansec.io/research/svg-onload-magecart-skimmer",
-            "target": [
-                "pub_php",
-                "cms_content",
-                "design_config"
-            ],
-            "pattern_type": "literal",
-            "pattern": "localStorage.setItem('_mgx_cv', '1')",
-            "description": "Matches the localStorage flag set by the skimmer so it runs only once per visitor. The _mgx_cv key is specific to this kit. Source: Sansec, SVG onload Magecart skimmer.",
-            "test_should_match": [
-                "localStorage.setItem('_mgx_cv', '1')"
-            ],
-            "test_should_not_match": [
-                "localStorage.setItem('cart_count', '1')"
-            ]
-        },
-        {
             "id": "trojanorder-competitor-payload-filter",
             "name": "Injected php://input filter blocking addafterfiltercallback payloads",
             "severity": "warning",
