@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.06",
+    "version": "2026.10.25",
     "note": "Domain and IP indicators. They go stale; each entry expires on expires_on and should be re-checked before renewing.",
     "signatures": [
         {
@@ -787,6 +787,48 @@
             ],
             "ioc": true,
             "expires_on": "2027-04-04"
+        },
+        {
+            "id": "cms-loader-keitaro-se-referrer-base64",
+            "name": "Base64 Keitaro loader URL with se_referrer",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-cms-block-loader-deepveindrilling",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "aHR0cHM6Ly9hZGRpdGlvbmFsdmVyLmNvbS9NYjJ6OEo/JnNlX3JlZmVycmVyPQ==",
+            "description": "Base64 encoded additionalver.com Keitaro tracker URL ending in se_referrer=, embedded in the CMS block loader.",
+            "test_should_match": [
+                "aHR0cHM6Ly9hZGRpdGlvbmFsdmVyLmNvbS9NYjJ6OEo/JnNlX3JlZmVycmVyPQ=="
+            ],
+            "test_should_not_match": [
+                "aHR0cHM6Ly9leGFtcGxlLmNvbS9hc3NldHMvYXBwLmpz"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-23"
+        },
+        {
+            "id": "cms-loader-deepveindrilling-domains",
+            "name": "CMS block loader campaign domains (deepveindrilling.com and predecessors)",
+            "severity": "critical",
+            "source": "https://sansec.io/research/magento-cms-block-loader-deepveindrilling",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:deepveindrilling\\.com|additionalver\\.com|lanhd6549tdhse\\.top|neswnsssn\\.click|manulfie\\.click|hdfdsi84j3h\\.top|c85grt98sd\\.com|leqdger\\.click|crypto-insider\\.top)\\b/i",
+            "description": "Loader, Keitaro and payload domains of the campaign that has hit 953 stores since July 2025.",
+            "test_should_match": [
+                "<script src=\"https://deepveindrilling.com/?s=d35c5031\"></script>"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/js/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-23"
         }
     ]
 }
