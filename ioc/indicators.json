@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.06",
+    "version": "2026.10.27",
     "note": "Domain and IP indicators. They go stale; each entry expires on expires_on and should be re-checked before renewing.",
     "signatures": [
         {
@@ -787,6 +787,27 @@
             ],
             "ioc": true,
             "expires_on": "2027-04-04"
+        },
+        {
+            "id": "ioc-cms-block-loader-953-domains",
+            "name": "CMS block loader domains (953 stores campaign)",
+            "severity": "critical",
+            "source": "https://thehackernews.com/2026/10/hackers-infect-953-online-stores-with.html",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:manulfie\\.click|neswnsssn\\.click|lanhd6549tdhse\\.top|additionalver\\.com|deepveindrilling\\.com)\\b/i",
+            "description": "Loader domains injected into Magento cms_block content in the long-running campaign reported by Sansec.",
+            "test_should_match": [
+                "additionalver.com"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-04-25"
         }
     ]
 }
