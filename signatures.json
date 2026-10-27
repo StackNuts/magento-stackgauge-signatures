@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.16",
+    "version": "2026.10.27",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -1738,6 +1738,48 @@
             ],
             "test_should_not_match": [
                 "cd pub; cd media; ls -la"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "skimmer-brazil-pipe-record-exfil",
+            "name": "Brazilian Magecart pipe-delimited card record exfil",
+            "severity": "critical",
+            "source": "https://sansec.io/research/convertr-plausible-supply-chain-attack",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/D\\.c\\s*\\+\\s*\"\\|\"\\s*\\+\\s*D\\.m\\s*\\+\\s*\"\\|\"\\s*\\+\\s*D\\.y\\s*\\+\\s*\"\\|\"\\s*\\+\\s*D\\.v/",
+            "description": "Skimmer code that joins card number, month, year and CVV into a pipe-delimited record before base64 exfiltration (Brazilian Magecart group, Sansec Convertr analysis).",
+            "test_should_match": [
+                "var raw = D.c + \"|\" + D.m + \"|\" + D.y + \"|\" + D.v + \"|\" + (D.p || \"\") + \"|\" + (D.n || \"\") + \"|ctr\";"
+            ],
+            "test_should_not_match": [
+                "var total = qty + \"|\" + price + \"|\" + sku;"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "skimmer-brazil-checkout-gate",
+            "name": "Skimmer gated on checkout.convertr pages",
+            "severity": "warning",
+            "source": "https://sansec.io/research/convertr-plausible-supply-chain-attack",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "indexOf('checkout.convertr')",
+            "description": "Skimmer activation check that only runs on Convertr checkout pages.",
+            "test_should_match": [
+                "if (location.href.indexOf('checkout.convertr') > -1) { run(); }"
+            ],
+            "test_should_not_match": [
+                "if (location.href.indexOf('/checkout/cart') > -1) { run(); }"
             ],
             "ioc": false
         }
