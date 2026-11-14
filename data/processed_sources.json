@@ -1,5 +1,5 @@
 {
-    "last_run": "2026-11-12",
+    "last_run": "2026-11-14",
     "sources": {
         "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html": {
             "first_seen": "2026-10-05",
@@ -748,6 +748,10 @@
         "https://thehackernews.com/2026/10/adobe-commerce-polyshell-attacks-breach.html": {
             "first_seen": "2026-10-28",
             "outcome": "read: 1 indicator(s)"
+        },
+        "https://sansec.io/research/shopify-app-supply-chain-attack": {
+            "first_seen": "2026-11-14",
+            "outcome": "skipped: not about Magento"
         }
     }
 }
