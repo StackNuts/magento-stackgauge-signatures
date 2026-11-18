@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.16",
+    "version": "2026.11.18",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -1738,6 +1738,65 @@
             ],
             "test_should_not_match": [
                 "cd pub; cd media; ls -la"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "rootways-ssrf-msync-webshell",
+            "name": "Rootways SSRF campaign web shell marker msync7a3f91",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "msync7a3f91",
+            "description": "Marker string from the web shell dropped after exploiting the Rootways Authorize.net CIM Apple Pay SSRF (CVE-2026-130583).",
+            "test_should_match": [
+                "Strings in files, database or logs: msync7a3f91 I086PUB-"
+            ],
+            "test_should_not_match": [
+                "<?php $mediaSync = $this->getRequest()->getParam('sync'); return $mediaSync;"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "rootways-ssrf-hybridws-skimmer",
+            "name": "Rootways SSRF campaign WebSocket skimmer __hybridWs",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "__hybridWs",
+            "description": "Skimmer loader identifier injected into design/head/includes after the Rootways Apple Pay SSRF compromise; exfiltrates card data over a WebSocket.",
+            "test_should_match": [
+                "Strings in files, database or logs: G-HE9K4M2P8R __hybridWs"
+            ],
+            "test_should_not_match": [
+                "<script>var ws = new WebSocket('wss://shop.example.com/live');</script>"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "rootways-ssrf-i086-probe-marker",
+            "name": "Rootways SSRF campaign operator marker I086PUB / X-I086",
+            "severity": "warning",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/\\b(?:I086PUB-|X-I086:\\s*pub)/",
+            "description": "Incrementing operator marker strings (I086PUB-, X-I086: pub) left by the attacker in files planted via the Rootways Apple Pay SSRF.",
+            "test_should_match": [
+                "I086PUB-",
+                "X-I086: pub"
+            ],
+            "test_should_not_match": [
+                "header('X-Frame-Options: SAMEORIGIN');"
             ],
             "ioc": false
         }

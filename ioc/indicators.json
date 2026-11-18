@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.06",
+    "version": "2026.11.18",
     "note": "Domain and IP indicators. They go stale; each entry expires on expires_on and should be re-checked before renewing.",
     "signatures": [
         {
@@ -787,6 +787,50 @@
             ],
             "ioc": true,
             "expires_on": "2027-04-04"
+        },
+        {
+            "id": "rootways-ssrf-skimmer-sslip-domain",
+            "name": "Rootways SSRF skimmer collector 45-86-62-180.sslip.io",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "45-86-62-180.sslip.io",
+            "description": "WebSocket skimmer collector domain from the Rootways Apple Pay SSRF campaign. Domain indicators go stale quickly; review before relying on it.",
+            "test_should_match": [
+                "new WebSocket('wss://45-86-62-180.sslip.io/ws')"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example-shop.com/js/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-05-17"
+        },
+        {
+            "id": "rootways-ssrf-attacker-ips",
+            "name": "Rootways SSRF campaign attacker IP addresses",
+            "severity": "warning",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "pub_php",
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "regex",
+            "pattern": "/(?<![\\d.])(?:45\\.86\\.62\\.180|37\\.72\\.140\\.221|45\\.166\\.20\\.61|54\\.39\\.16\\.34|2\\.27\\.168\\.28)(?![\\d.])/",
+            "description": "IP addresses of the attack and skimmer infrastructure in the Rootways Apple Pay SSRF campaign. IP indicators go stale quickly; review before relying on it.",
+            "test_should_match": [
+                "Network: 45.86.62.180 37.72.140.221"
+            ],
+            "test_should_not_match": [
+                "Server 145.86.62.1800 is unrelated"
+            ],
+            "ioc": true,
+            "expires_on": "2027-05-17"
         }
     ]
 }
