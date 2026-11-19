@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.06",
+    "version": "2026.11.19",
     "note": "Domain and IP indicators. They go stale; each entry expires on expires_on and should be re-checked before renewing.",
     "signatures": [
         {
@@ -787,6 +787,28 @@
             ],
             "ioc": true,
             "expires_on": "2027-04-04"
+        },
+        {
+            "id": "rootways-ssrf-skimmer-sslip-domain",
+            "name": "Rootways SSRF skimmer collector domain",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "cms_content",
+                "design_config",
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "45-86-62-180.sslip.io",
+            "description": "sslip.io hostname that receives card data from the WebSocket skimmer in the Rootways Apple Pay SSRF campaign.",
+            "test_should_match": [
+                "45-86-62-180.sslip.io"
+            ],
+            "test_should_not_match": [
+                "<script src=\"https://cdn.example.com/app.js\"></script>"
+            ],
+            "ioc": true,
+            "expires_on": "2027-05-18"
         }
     ]
 }
