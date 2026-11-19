@@ -1,0 +1,170 @@
+[
+    {
+        "url": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+        "date": "2026-11-17",
+        "title": "",
+        "feedText": "",
+        "indicators": [
+            {
+                "kind": "code",
+                "text": "rootways/module-authorizecim",
+                "context": "rootways/module-authorizecim"
+            },
+            {
+                "kind": "code",
+                "text": "Rootways_Authorizecim",
+                "context": "Rootways_Authorizecim"
+            },
+            {
+                "kind": "code",
+                "text": "apple-pay-gateway*.apple.com",
+                "context": "apple-pay-gateway*.apple.com"
+            },
+            {
+                "kind": "code",
+                "text": "cn-apple-pay-gateway*.apple.com",
+                "context": "cn-apple-pay-gateway*.apple.com"
+            },
+            {
+                "kind": "code",
+                "text": "composer show rootways/module-authorizecim\n# or, for app/code installs\ngrep '\"version\"' app/code/Rootways/Authorizecim/composer.json",
+                "context": "composer show rootways/module-authorizecim # or, for app/code installs grep '\"version\"' app/code/Rootways/Authorizecim/composer.json"
+            },
+            {
+                "kind": "code",
+                "text": "/rootways_authorizecim/applepay/index",
+                "context": "/rootways_authorizecim/applepay/index"
+            },
+            {
+                "kind": "code",
+                "text": "design/head/includes",
+                "context": "design/head/includes"
+            },
+            {
+                "kind": "code",
+                "text": "45-86-62-180.sslip.io",
+                "context": "45-86-62-180.sslip.io"
+            },
+            {
+                "kind": "code",
+                "text": "payment/rootways_authorizecim_option_applepay/active",
+                "context": "payment/rootways_authorizecim_option_applepay/active"
+            },
+            {
+                "kind": "code",
+                "text": "/rootways_authorizecim/applepay/index?validationUrl=<anything not on apple-pay-gateway*.apple.com>\n/rootways_authorizecim/applepay/index?...&z=<?=",
+                "context": "/rootways_authorizecim/applepay/index?validationUrl=<anything not on apple-pay-gateway*.apple.com> /rootways_authorizecim/applepay/index?...&z=<?="
+            },
+            {
+                "kind": "code",
+                "text": "pub/media_sync.php\nvar/report/i08*_*.php\nvar/report/i086w.php\nvar/report/cache_report.so\n/tmp/i086_x.so  sha256 0ef70175c37ae25c9495725912ef4988234c5db068bbace50d6c80144ece1231\n/tmp/i086_cmd.sh\n/tmp/i087w.php",
+                "context": "pub/media_sync.php var/report/i08*_*.php var/report/i086w.php var/report/cache_report.so /tmp/i086_x.so sha256 0ef70175c37ae25c9495725912ef4988234c5db068bbace50"
+            },
+            {
+                "kind": "code",
+                "text": "msync7a3f91\nI086PUB-\nX-I086: pub\n@media.sync\nG-HE9K4M2P8R\n__hybridWs",
+                "context": "msync7a3f91 I086PUB- X-I086: pub @media.sync G-HE9K4M2P8R __hybridWs"
+            },
+            {
+                "kind": "code",
+                "text": "45-86-62-180.sslip.io\n45.86.62.180\n37.72.140.221\n45.166.20.61\n54.39.16.34\n2.27.168.28",
+                "context": "45-86-62-180.sslip.io 45.86.62.180 37.72.140.221 45.166.20.61 54.39.16.34 2.27.168.28"
+            },
+            {
+                "kind": "base64",
+                "text": "0ef70175c37ae25c9495725912ef4988234c5db068bbace50d6c80144ece1231",
+                "context": "0ef70175c37ae25c9495725912ef4988234c5db068bbace50d6c80144ece1231"
+            },
+            {
+                "kind": "domain",
+                "text": "authorize.net",
+                "context": "Authorize.net"
+            },
+            {
+                "kind": "domain",
+                "text": "apple.com",
+                "context": "apple.com"
+            },
+            {
+                "kind": "domain",
+                "text": "45-86-62-180.sslip.io",
+                "context": "45-86-62-180.sslip.io"
+            },
+            {
+                "kind": "domain",
+                "text": "sslip.io",
+                "context": "sslip.io"
+            },
+            {
+                "kind": "ip",
+                "text": "37.72.140.221",
+                "context": "37.72.140.221"
+            },
+            {
+                "kind": "ip",
+                "text": "45.86.62.180",
+                "context": "45.86.62.180"
+            },
+            {
+                "kind": "ip",
+                "text": "45.166.20.61",
+                "context": "45.166.20.61"
+            },
+            {
+                "kind": "ip",
+                "text": "54.39.16.34",
+                "context": "54.39.16.34"
+            },
+            {
+                "kind": "ip",
+                "text": "2.27.168.28",
+                "context": "2.27.168.28"
+            },
+            {
+                "kind": "file",
+                "text": "env.php",
+                "context": "env.php"
+            },
+            {
+                "kind": "file",
+                "text": "media_sync.php",
+                "context": "media_sync.php"
+            },
+            {
+                "kind": "file",
+                "text": "i086_marker.txt",
+                "context": "i086_marker.txt"
+            },
+            {
+                "kind": "file",
+                "text": "i086_x.so",
+                "context": "i086_x.so"
+            },
+            {
+                "kind": "file",
+                "text": "i086w.php",
+                "context": "i086w.php"
+            },
+            {
+                "kind": "file",
+                "text": "cache_report.so",
+                "context": "cache_report.so"
+            },
+            {
+                "kind": "file",
+                "text": "i086_cmd.sh",
+                "context": "i086_cmd.sh"
+            },
+            {
+                "kind": "file",
+                "text": "i087w.php",
+                "context": "i087w.php"
+            },
+            {
+                "kind": "path",
+                "text": "/tmp",
+                "context": "/tmp"
+            }
+        ]
+    }
+]
