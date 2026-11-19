@@ -1,5 +1,5 @@
 {
-    "version": "2026.10.16",
+    "version": "2026.11.19",
     "signatures": [
         {
             "id": "webshell-eval-base64",
@@ -1738,6 +1738,45 @@
             ],
             "test_should_not_match": [
                 "cd pub; cd media; ls -la"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "rootways-ssrf-webshell-msync",
+            "name": "Rootways Apple Pay SSRF web shell marker",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "pub_php"
+            ],
+            "pattern_type": "literal",
+            "pattern": "msync7a3f91",
+            "description": "Marker string from the pub/media_sync.php web shell dropped after exploitation of the Rootways Authorize.net CIM Apple Pay SSRF (CVE-2026-130583).",
+            "test_should_match": [
+                "msync7a3f91"
+            ],
+            "test_should_not_match": [
+                "<?php\nnamespace Magento\\MediaStorage\\Model;\nclass Sync { public function run() { return $this->storage->sync(); } }"
+            ],
+            "ioc": false
+        },
+        {
+            "id": "rootways-ssrf-skimmer-hybridws",
+            "name": "Rootways SSRF WebSocket skimmer marker",
+            "severity": "critical",
+            "source": "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf",
+            "target": [
+                "cms_content",
+                "design_config"
+            ],
+            "pattern_type": "literal",
+            "pattern": "__hybridWs",
+            "description": "Global variable name used by the WebSocket skimmer loader injected into design/head/includes after the Rootways Apple Pay SSRF compromise.",
+            "test_should_match": [
+                "__hybridWs"
+            ],
+            "test_should_not_match": [
+                "<script>var ws = new WebSocket('wss://' + location.host + '/live');</script>"
             ],
             "ioc": false
         }
