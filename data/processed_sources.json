@@ -1,5 +1,5 @@
 {
-    "last_run": "2026-11-17",
+    "last_run": "2026-11-19",
     "sources": {
         "https://blog.sucuri.net/2024/11/credit-card-skimmer-malware-targeting-magento-checkout-pages.html": {
             "first_seen": "2026-10-05",
@@ -756,6 +756,10 @@
         "https://thehackernews.com/2026/11/hijacked-optimizely-scripts-served-card.html": {
             "first_seen": "2026-11-17",
             "outcome": "skipped: not about Magento"
+        },
+        "https://sansec.io/research/rootways-authorize-net-apple-pay-ssrf": {
+            "first_seen": "2026-11-19",
+            "outcome": "read: 32 indicator(s)"
         }
     }
 }
